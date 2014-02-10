@@ -1,0 +1,10 @@
+A project for analyzing the housing market using hadoop, HBase, Mahout, and similar cloud technologies.
+
+This is designed to run using CDH 4.5.0.  It is being developed on the cloudera 4.5.0 virtual machine.
+
+It's not tested on other systems.
+
+The project uses data downloaded from Zillow.  The data is saved in HBase.  In time, the project will
+do several intelligent algorithms on the data such as clustering, classification, etc.
+
+The long term goal is to find the best investment opportunities in the market.
