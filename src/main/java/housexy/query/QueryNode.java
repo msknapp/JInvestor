@@ -85,7 +85,7 @@ public class QueryNode {
 					String[] parts = s.split("and");
 					List<SimpleQueryPart> sqps = new ArrayList<>();
 					for (String part : parts) {
-						SimpleQueryPart sqp = new SimpleQueryPart(part);
+						SimpleQueryPart sqp = SimpleQueryPart.fromQuery(part);
 						sqps.add(sqp);
 					}
 					ComplexQueryPart cqp = new ComplexQueryPart(true, sqps);
@@ -94,13 +94,13 @@ public class QueryNode {
 					String[] parts = s.split("or");
 					List<SimpleQueryPart> sqps = new ArrayList<>();
 					for (String part : parts) {
-						SimpleQueryPart sqp = new SimpleQueryPart(part.trim());
+						SimpleQueryPart sqp = SimpleQueryPart.fromQuery(part.trim());
 						sqps.add(sqp);
 					}
 					ComplexQueryPart cqp = new ComplexQueryPart(false, sqps);
 					queryParts.add(cqp);
 				} else {
-					queryParts.add(new SimpleQueryPart(s));
+					queryParts.add(SimpleQueryPart.fromQuery(s));
 				}
 			} else {
 				queryParts.add(((QueryNode)o).toQueryPart());

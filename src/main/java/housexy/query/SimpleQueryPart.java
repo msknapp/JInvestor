@@ -9,25 +9,71 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 
 public class SimpleQueryPart implements QueryPart {
-	private String field,operation,value;
+	private final String field,operation,value;
 	
-	public SimpleQueryPart(String query) {
+	private SimpleQueryPart(SimpleQueryPartBuilder builder) {
+		this.field = builder.field;
+		this.operation = builder.operation;
+		this.value = builder.value;
+	}
+	
+	public static final SimpleQueryPartBuilder builder() {
+		return new SimpleQueryPartBuilder();
+	}
+	
+	public static final class SimpleQueryPartBuilder implements QueryPartBuilder {
+		private String field,operation,value;
+		
+		public SimpleQueryPartBuilder() {
+			
+		}
+		public SimpleQueryPartBuilder(SimpleQueryPart original) {
+			this.field = original.field;
+			this.operation = original.operation;
+			this.value = original.value;
+		}
+		public SimpleQueryPartBuilder(SimpleQueryPartBuilder builder) {
+			this.field = builder.field;
+			this.operation = builder.operation;
+			this.value = builder.value;
+		}
+		public SimpleQueryPartBuilder field(String field) {
+			this.field = field;
+			return this;
+		}
+		public SimpleQueryPartBuilder operation(String operation) {
+			this.operation = operation;
+			return this;
+		}
+		public SimpleQueryPartBuilder value(String value) {
+			this.value = value;
+			return this;
+		}
+		public SimpleQueryPart build() {
+			return new SimpleQueryPart(this);
+		}
+	}
+	
+	public static final SimpleQueryPart fromQuery(String query) {
+		SimpleQueryPartBuilder b = new SimpleQueryPartBuilder();
 		String regex = "(\\w+)\\s*(={1,2}|<|>|like)\\s*(.*)";
 		Pattern p = Pattern.compile(regex);
 		Matcher m = p.matcher(query);
 		if (m.matches()) {
-			field = m.group(1);
-			operation = m.group(2);
-			value = m.group(3);
+			b.field(m.group(1));
+			b.operation(m.group(2));
+			String value = m.group(3);
 			if (value.startsWith("'")) {
 				value = value.substring(1);
 			}
 			if (value.endsWith("'")) {
 				value = value.substring(0,value.length()-1);
 			}
+			b.value(value);
 		} else {
 			System.out.println("failed to match "+query);
 		}
+		return b.build();
 	}
 	
 	public boolean passes(Object house) {
@@ -87,7 +133,7 @@ public class SimpleQueryPart implements QueryPart {
 	}
 
 	public String toString() {
-		return String.format("%s %s %s",field,operation,value);
+		return String.format("%s %s '%s'",field,operation,value.replace("'","\\'"));
 	}
 	
 	public Filter toFilter(byte[] family) {
