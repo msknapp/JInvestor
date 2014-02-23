@@ -14,12 +14,16 @@
 	<properties>
 		<spring.version>3.2.5.RELEASE</spring.version>
 		<hadoop.version>2.1.1.RELEASE</hadoop.version>
-		<source.encoding>UTF-8</source.encoding>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
+
+	<url>https://github.com/msknapp/JInvestor</url>
+	<description>Java projects to analyze investment opportunities</description>
 
 	<scm>
 		<url>https://github.com/msknapp/JInvestor</url>
-		<connection>ssh://git@github.com/msknapp/JInvestor.git</connection>
+		<connection>scm:git:ssh://git@github.com/msknapp/JInvestor.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com/msknapp/JInvestor.git</developerConnection>
 	</scm>
 
 	<repositories>
@@ -146,8 +150,8 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
-	
-	
+
+
 	<build>
 		<plugins>
 			<plugin>
@@ -158,6 +162,167 @@
 					<target>1.7</target>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>license-maven-plugin</artifactId>
+				<version>1.6</version>
+				<configuration>
+					<!-- Used with: mvn license:update-file-header -->
+					<organizationName>Michael Scott Knapp</organizationName>
+					<inceptionYear>2014</inceptionYear>
+					<licenseName>apache_v2</licenseName>
+					<roots>
+						<!-- Does not accept glob patterns -->
+						<root>JHouse/jhouse.download/src/main/java</root>
+						<root>JHouse/jhouse.download/src/test/java</root>
+						<root>JStock/jstock.download/src/main/java</root>
+						<root>JStock/jstock.download/src/test/java</root>
+						<root>JStock/jstock.core/src/main/java</root>
+						<root>JStock/jstock.core/src/test/java</root>
+						<root>JStock/jstock.mr/src/main/java</root>
+						<root>JStock/jstock.mr/src/test/java</root>
+					</roots>
+					<includes>
+						<include>**/*.java</include>
+					</includes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>download-licenses</id>
+						<goals>
+							<goal>download-licenses</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>first</id>
+						<goals>
+							<goal>update-file-header</goal>
+						</goals>
+						<phase>process-sources</phase>
+						<configuration>
+							<!-- Used with: mvn package -->
+							<organizationName>Michael Scott Knapp</organizationName>
+							<inceptionYear>2014</inceptionYear>
+							<licenseName>apache_v2</licenseName>
+							<roots>
+								<!-- Does not accept glob patterns -->
+								<root>JHouse/jhouse.download/src/main/java</root>
+								<root>JHouse/jhouse.download/src/test/java</root>
+								<root>JStock/jstock.download/src/main/java</root>
+								<root>JStock/jstock.download/src/test/java</root>
+								<root>JStock/jstock.core/src/main/java</root>
+								<root>JStock/jstock.core/src/test/java</root>
+								<root>JStock/jstock.mr/src/main/java</root>
+								<root>JStock/jstock.mr/src/test/java</root>
+							</roots>
+							<includes>
+								<include>**/*.java</include>
+							</includes>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>site</phase>
+						<goals>
+							<goal>javadoc</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>cobertura-maven-plugin</artifactId>
+				<version>2.6</version>
+				<executions>
+					<execution>
+						<!-- <phase>site</phase> -->
+						<goals>
+							<goal>clean</goal>
+						</goals>
+					</execution>
+				</executions>
+				<!-- <configuration> -->
+				<!-- <instrumentation> -->
+				<!-- <ignores> -->
+				<!-- <ignore>com.example.boringcode.*</ignore> -->
+				<!-- </ignores> -->
+				<!-- <excludes> -->
+				<!-- <exclude>com/example/dullcode/**/*.class</exclude> -->
+				<!-- <exclude>com/example/**/*Test.class</exclude> -->
+				<!-- </excludes> -->
+				<!-- </instrumentation> -->
+				<!-- </configuration> -->
+			</plugin>
 		</plugins>
 	</build>
+
+	<reporting>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>3.0.1</version>
+				<configuration>
+					<linkXref>true</linkXref>
+					<sourceEncoding>UTF-8</sourceEncoding>
+					<minimumTokens>100</minimumTokens>
+					<targetJdk>1.7</targetJdk>
+					<excludes>
+						<exclude>**/*Bean.java</exclude>
+						<exclude>**/generated/*.java</exclude>
+					</excludes>
+					<excludeRoots>
+						<excludeRoot>target/generated-sources/stubs</excludeRoot>
+					</excludeRoots>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>3.0.1</version>
+				<configuration>
+					<linkXref>true</linkXref>
+					<sourceEncoding>utf-8</sourceEncoding>
+					<minimumTokens>100</minimumTokens>
+					<targetJdk>1.7</targetJdk>
+					<!-- <excludes> -->
+					<!-- <exclude>**/*Bean.java</exclude> -->
+					<!-- <exclude>**/generated/*.java</exclude> -->
+					<!-- </excludes> -->
+					<!-- <excludeRoots> -->
+					<!-- <excludeRoot>target/generated-sources/stubs</excludeRoot> -->
+					<!-- </excludeRoots> -->
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>cobertura-maven-plugin</artifactId>
+				<version>2.6</version>
+			</plugin>
+			<plugin>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>findbugs-maven-plugin</artifactId>
+				<version>2.5.4-SNAPSHOT</version>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>javancss-maven-plugin</artifactId>
+				<version>2.0-beta-2</version>
+			</plugin>
+		</plugins>
+	</reporting>
 </project>
