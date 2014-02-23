@@ -1,0 +1,117 @@
+package com.kt.sr.view;
+
+import java.awt.Component;
+import java.awt.Dimension;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
+import com.kt.sr.model.Financial.FinancialHistory;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.model.comp.Company;
+import com.kt.sr.persistence.IndustryManager;
+import com.kt.sr.persistence.SectorManager;
+
+/**
+ * Lets you view details on a company.
+ * @author Michael Knapp
+ */
+public class CompanyWindow {
+	private Company company = null;
+	
+	private JFrame frame = null;
+	private static final String CLOSE = "close";
+	
+	
+	public CompanyWindow(Company company) {
+		this.company = company;
+	}
+	
+	/**
+	 * builds the frame and fills in all necessary data.
+	 * Displays it for the user.
+	 */
+	public void show() {
+		Runnable r = new Runnable() {
+			@Override
+			public void run() {
+				build();
+				frame.setVisible(true);
+			}
+		};
+		Thread t = new Thread(r,"company display");
+		t.start();
+	}
+	
+	/**
+	 * Builds all of the frame and its components,
+	 * uses the company data for values.
+	 */
+	private void build() {
+		Map<String,String> m = new LinkedHashMap<String,String>();
+		m.put("Ticker",company.getID());
+		m.put("Sector",SectorManager.getName(company.getSector()));
+		m.put("Industry",IndustryManager.getName(company.getSector()));
+		if (company.getPriceHistory()!=null) {
+			PriceHistory ph = company.getPriceHistory();
+			m.put("Last Price",String.valueOf(ph.getLastValidValue()));
+			m.put("Beta", String.valueOf(ph.getBeta()));
+			m.put("Last Update", ph.getLastSuccessfulUpdate().toString());
+			m.put("Start Date", ph.getStartDate().toString());
+			m.put("End Date", ph.getEndDate().toString());
+		}
+		if (company.getFinancialHistory()!=null) {
+			FinancialHistory fh = company.getFinancialHistory();
+			m.put("Current Ratio",String.valueOf(fh.getCurrentRatio().getValue()));
+			m.put("FCFE",String.valueOf(fh.getFreeCashFlowToEquity().getValue()));
+			m.put("Last FH Update",fh.getLastUpdate().toString());
+		}
+		
+		frame = new JFrame("Company "+company.getID());
+		frame.setResizable(false);
+		JPanel mainPanel = new JPanel();
+		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+		mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+		JPanel topPanel = GUIFactory.createSimplePropertiesPanel(m);
+		mainPanel.add(topPanel);
+		JPanel middlePanel = new JPanel();
+		middlePanel.setLayout(new BoxLayout(middlePanel, BoxLayout.Y_AXIS));
+		mainPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		mainPanel.add(middlePanel);
+		
+		JButton openPriceHistoryButton = new JButton("Open Price History");
+		JButton openFinancialHistoryButton = new JButton("Open Financial History");
+		JButton openRegressionResultsButton = new JButton("Open Regression Results");
+		openPriceHistoryButton.setPreferredSize(new Dimension(200,40));
+		openFinancialHistoryButton.setPreferredSize(new Dimension(200,40));
+		openRegressionResultsButton.setPreferredSize(new Dimension(200,40));
+		openPriceHistoryButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+		openFinancialHistoryButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+		openRegressionResultsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+		middlePanel.add(openPriceHistoryButton);
+		middlePanel.add(Box.createRigidArea(new Dimension(0,5)));
+		middlePanel.add(openFinancialHistoryButton);
+		middlePanel.add(Box.createRigidArea(new Dimension(0,5)));
+		middlePanel.add(openRegressionResultsButton);
+		
+		
+		frame.setContentPane(mainPanel);
+		frame.pack();
+	}
+	
+	public static void main(String[] args) {
+//		try {
+//			Company company = Company.create("PFE", sector, industry)();
+//			CompanyWindow cw = new CompanyWindow(company);
+//			cw.show();
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
+	}
+}

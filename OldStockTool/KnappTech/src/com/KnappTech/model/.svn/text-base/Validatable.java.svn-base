@@ -1,0 +1,5 @@
+package com.kt.model;
+
+public interface Validatable {
+	public boolean isValid();
+}

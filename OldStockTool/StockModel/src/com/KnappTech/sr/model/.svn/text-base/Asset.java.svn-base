@@ -1,0 +1,11 @@
+package com.kt.sr.model;
+
+import com.kt.model.KTObject;
+import com.kt.model.ReportableSet;
+import com.kt.sr.model.comp.Currency;
+
+public interface Asset extends KTObject, ReportableSet {
+
+	public Currency getValueOfShare();
+
+}

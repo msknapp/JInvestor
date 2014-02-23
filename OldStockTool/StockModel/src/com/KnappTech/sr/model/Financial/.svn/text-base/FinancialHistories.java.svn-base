@@ -1,0 +1,104 @@
+package com.kt.sr.model.Financial;
+
+import java.util.Collection;
+import java.util.Iterator;
+
+import com.kt.model.ReportableSet;
+import com.kt.sr.ctrl.acq.FinancialRetriever.MyRunner;
+import com.kt.sr.ctrl.parse.FinancialParser;
+import com.kt.sr.model.AbstractKTSet;
+import com.kt.sr.persistence.FinancialEntryTypesManager;
+import com.kt.sr.persistence.FinancialHistoryManager;
+import com.kt.util.KTTimer;
+import com.kt.view.report.Report;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class FinancialHistories extends AbstractKTSet<FinancialHistory> implements ReportableSet {
+	private static final long serialVersionUID = 201001161951L;
+    
+    public FinancialHistories() {
+    	
+    }
+
+	public FinancialHistories(Collection<FinancialHistory> items) {
+		super(items);
+	}
+
+	@Override
+	public int compareTo(String o) {
+		return 0;
+	}
+
+	@Override
+	public Report getReport(ReportSettings settings) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	public void updateAll() {
+		FinancialParser fp = new FinancialParser();
+		Iterator<FinancialHistory> iter = items.iterator();
+		while (iter.hasNext()){
+			try {
+				FinancialHistory financial = iter.next();
+				String msg = "taking too long to retrieve financial data for "+financial.getID();
+				KTTimer escapeTimer = new KTTimer("Escape Financial Retrieval", 8, msg, true);
+				System.out.println("Now working on financials for company: "
+						+financial.getID());
+				fp.update(financial);
+				FinancialHistoryManager.save(financial,true);
+				FinancialEntryTypesManager.Save();
+				escapeTimer.stop();
+			} catch (Exception e) {
+				System.err.println("Exception caught.");
+			}
+		}
+	}
+
+	@Override
+	public boolean save(boolean multiThread) throws InterruptedException {
+		boolean worked = true;
+		for (FinancialHistory financialHistory : items) {
+			if (!FinancialHistoryManager.save(financialHistory, true)) {
+				worked = false;
+			}
+		}
+		return worked;
+	}
+	
+	public void update() {
+		FinancialParser fp = new FinancialParser();
+		for (FinancialHistory financial : items) {
+			try {
+				Runnable mr = new MyRunner(financial, fp);
+				Thread t = new Thread(mr,"financial retriever");
+				long startTime = System.currentTimeMillis();
+				long elapsedTime = 0;
+				t.start();
+				Thread.sleep(100);
+				while (t.isAlive() && elapsedTime<10000) {
+					Thread.sleep(1000);
+					elapsedTime = System.currentTimeMillis()-startTime;
+				}
+				if (t.isAlive()) {
+					System.err.println("The current retriever thread is not finishing," +
+							" we are starting a new one and ignoring that one, it will " +
+							"most likely never finish.");
+					t.interrupt();
+				}
+				// we move on even if the thread never wakes.
+				// it might be running forever.
+				// but I cannot afford to stop.
+			} catch (Exception e) {
+				System.err.println("Exception caught.");
+			}
+		}
+	}
+}

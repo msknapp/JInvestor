@@ -1,0 +1,137 @@
+package com.kt.sr.view.report;
+
+import java.util.LinkedHashSet;
+
+import com.kt.sr.model.Financial.FinancialHistory;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.model.user.Investor;
+import com.kt.view.report.ReportSettings;
+
+/**
+ * Supplies default report settings when you need them.
+ * @author Michael Knapp
+ */
+public class ReportSettingsHelper {
+	
+	public static Investor getInvestor(ReportSettings settings) {
+		Object inv = settings.get(Investor.class.getName());
+		if (inv!=null) {
+			return (Investor)inv;
+		}
+		return null;
+	}
+	
+	public static PriceHistory getPriceHistory(ReportSettings settings) {
+		Object ph = settings.get(PriceHistory.class.getName());
+		if (ph!=null) {
+			return (PriceHistory)ph;
+		}
+		return null;
+	}
+	
+	public static FinancialHistory getFinancialHistory(ReportSettings settings) {
+		Object ph = settings.get(FinancialHistory.class.getName());
+		if (ph!=null) {
+			return (FinancialHistory)ph;
+		}
+		return null;
+	}
+	
+	public static ReportSettings defaultForAllCompanies() {
+		ReportSettings settings = new ReportSettings();
+		LinkedHashSet<String> columns = new LinkedHashSet<String>();
+		columns.add("id");
+		columns.add("sector");
+		columns.add("industry");
+		columns.add("wfcfe (m$)");
+		columns.add("wgrowth");
+		columns.add("beta");
+		columns.add("eror");
+		columns.add("years");
+		columns.add("mc (m$)");
+		columns.add("te (m$)");
+		columns.add("mc/te");
+		columns.add("mc/fcfe");
+		columns.add("p/e");
+		columns.add("last known price");
+		columns.add("estimate");
+		columns.add("volatility");
+		columns.add("r2");
+		columns.add("standard deviation");
+		columns.add("percent of value");
+		columns.add("z");
+		columns.add("probability of increase");
+		columns.add("roi");
+		columns.add("score");
+		columns.add("cr");
+		columns.add("l/a");
+		columns.add("pm");
+		columns.add("div/p");
+		columns.add("roa");
+		columns.add("roe");
+		
+		settings.sortRowsByAttributeName="score";
+		settings.sortRowsByNumber=true;
+		settings.ascending=false;
+		settings.includeFinancialHistory=true;
+		settings.includePriceHistory = true;
+		settings.getEstimate = true;
+		settings.maxRows = 200;
+		
+		settings.addColumns(columns);
+		settings.store(Investor.MichaelKnapp());
+		return settings;
+	}
+	
+	public static ReportSettings defaultForAllIndustries() {
+		ReportSettings settings = new ReportSettings();
+		LinkedHashSet<String> columns = new LinkedHashSet<String>();
+		columns.add("id");
+		columns.add("last known price");
+		columns.add("estimate");
+		columns.add("volatility");
+		columns.add("r2");
+		columns.add("standard deviation");
+		columns.add("percent of value");
+		columns.add("z");
+		columns.add("probability of increase");
+		columns.add("roi");
+		
+		settings.sortRowsByAttributeName="score";
+		settings.sortRowsByNumber=true;
+		settings.ascending=false;
+		settings.includeFinancialHistory=true;
+		settings.includePriceHistory = true;
+		settings.getEstimate = true;
+		settings.includeCompaniesWithoutRegression=true;
+		
+		settings.addColumns(columns);
+		settings.store(Investor.MichaelKnapp());
+		return settings;
+	}
+
+	public static ReportSettings defaultForIndicators() {
+		ReportSettings settings = new ReportSettings();
+		LinkedHashSet<String> columns = new LinkedHashSet<String>();
+		columns.add("id");
+		columns.add("start date");
+		columns.add("end date");
+		columns.add("last successful update");
+		columns.add("last attempted update");
+		columns.add("source agency");
+		columns.add("update frequency");
+		columns.add("first value");
+		columns.add("last value");
+		columns.add("volatility");
+		columns.add("min value");
+		columns.add("max value");
+		
+		settings.sortRowsByAttributeName="id";
+		settings.sortRowsByNumber=true;
+		settings.ascending=true;
+		
+		settings.addColumns(columns);
+		settings.store(Investor.MichaelKnapp());
+		return settings;
+	}
+}

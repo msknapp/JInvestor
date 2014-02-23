@@ -1,0 +1,39 @@
+package com.kt.sr.ctrl;
+
+import com.kt.sr.model.Regressable.PriceHistories;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.persistence.PriceHistoryManager;
+
+public class BetaUpdater {
+	private static PriceHistory indicator = null;
+	private static double varianceOfIndicator = -1;
+	
+	public static void main(String[] args) {
+		int s = (int)'F';
+		int f = (int)'Z';
+		try {
+			indicator = PriceHistoryManager.getIfStored("^GSPC");
+			varianceOfIndicator = indicator.calculateVarianceOfReturn();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		for (int i = s;i<=f;i++) {
+			char currentChar = (char)i;
+			runForChar(currentChar);
+		}
+	}
+
+
+	private static void runForChar(char currentChar) {
+		PriceHistoryManager.clear();
+		PriceHistories priceHistories = null;
+		try {
+			System.out.println("Started letter "+currentChar+" loading companies.");
+			priceHistories = PriceHistoryManager.getEverythingStored(currentChar,true);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		System.out.println("Finished loading companies, beta calculation will begin.");
+		priceHistories.updateBetas(currentChar,indicator,varianceOfIndicator);
+	}
+}

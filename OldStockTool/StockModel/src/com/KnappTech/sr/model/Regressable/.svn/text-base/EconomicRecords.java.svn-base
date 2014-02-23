@@ -1,0 +1,171 @@
+package com.kt.sr.model.Regressable;
+
+import java.util.Collection;
+import java.util.Iterator;
+
+import com.kt.model.ReportableSet;
+import com.kt.model.UpdateFrequency;
+import com.kt.sr.ctrl.parse.ERParser;
+import com.kt.sr.ctrl.reg.ERRegresser;
+import com.kt.sr.persistence.EconomicRecordManager;
+import com.kt.util.KTTimer;
+import com.kt.view.report.Report;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class EconomicRecords extends RecordSet<EconomicRecord> 
+implements ReportableSet {
+	private static final long serialVersionUID = 201010092150L;
+
+	public EconomicRecords() {
+		super();
+	}
+	
+	public EconomicRecords(Collection<EconomicRecord> records) {
+		super(records);
+	}
+	
+	@Override
+	public EconomicRecords createInstance() {
+		return new EconomicRecords();
+	}
+
+	@Override
+	public Report getReport(ReportSettings settings) {
+		Report report = new Report(settings);
+		for (EconomicRecord record : items) {
+			report.add(record.getReportRow(settings));
+		}
+		return report;
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		// this function does not make sense to call.
+		// it remains here so the object implements Reportable.
+		return null;
+	}
+
+	@Override
+	public boolean save(boolean multiThread) throws InterruptedException {
+		boolean worked = true;
+		for (EconomicRecord economicRecord : items) {
+			if (!EconomicRecordManager.save(economicRecord, true)) {
+				worked = false;
+			}
+		}
+		return worked;
+	}
+	
+	public void update(ERParser parser) {
+		for (EconomicRecord record : this.items) {
+			try {
+				System.out.println("Now working on record: "+record.getID());
+				String msg = "ER Retreiver is taking too long with record "+record.getID();
+				KTTimer escapeTimer = new KTTimer("er retrieve escaper",60,msg,true);
+				if (record.getSourceAgency()==null || 
+					record.getSourceAgency().equals(parser.getSourceAgency()))
+				{
+					parser.update(record);
+					if (Thread.interrupted()) {
+						throw new InterruptedException();
+					}
+					if (record.sizeOfValidEntries()>2) {
+						// don't want an excess amount of data stored
+						// or used, stick with stuff that is updated often:
+						if (record.determineUpdateFrequency().isMoreFrequent(UpdateFrequency.BIMONTHLY)) {
+							EconomicRecordManager.save(record,true);
+						}
+					} else {
+						System.out.println("After the update, there are no/few valid entries.");
+					}
+					if (Thread.interrupted()) {
+						throw new InterruptedException();
+					}
+				}
+				String id = record.getID();
+				EconomicRecordManager.remove(id);
+				escapeTimer.stop();
+			} catch (InterruptedException e) { // just continue.
+			} catch (RuntimeException e) {
+				e.printStackTrace();
+				System.err.println("Unable to update "+record.getID());
+			} catch (Exception e) {
+				String msg = "Exception caught while downloading Economic Record history, " +
+						"see EconomicRecords update function.";
+				e.printStackTrace();
+				System.err.println(msg);
+			}
+			Thread.interrupted(); // resets the interrupted value.
+		}
+	}
+
+	public EconomicRecords subSet(RecordFilter filter) {
+		Iterator<EconomicRecord> iter = items.iterator();
+		EconomicRecords adjustedIndicators = new EconomicRecords();
+		filter.setCurrentRecords(adjustedIndicators);
+		while (iter.hasNext()) {
+			adjustedIndicators.add(iter.next());
+		}
+		return adjustedIndicators;
+	}
+
+	public EconomicRecords subSet(RecordFilter filter,int maxIndicators) {
+		Iterator<EconomicRecord> iter = items.iterator();
+		EconomicRecord currentRecord;
+		EconomicRecords adjustedIndicators = new EconomicRecords();
+		adjustedIndicators.setMaximumSize(maxIndicators);
+		filter.setCurrentRecords(adjustedIndicators);
+		int count = 0;
+		int numberReplaced = 0;
+		while (iter.hasNext() && (adjustedIndicators.size()<maxIndicators-1 ||
+				((count<400 || numberReplaced<30) && count<500))) {
+			try {
+				currentRecord = iter.next();
+				if (filter.acceptable(currentRecord))
+				{
+					if (adjustedIndicators.size()<maxIndicators) {
+						adjustedIndicators.add(currentRecord);
+					} else {
+						boolean replaced = adjustedIndicators.replaceLeastFrequentlyUpdatedRecord(currentRecord)!=null;
+						if (!replaced) {
+							replaced = adjustedIndicators.replaceSmallestRecord(currentRecord)!=null;
+						}
+						if (replaced) {
+							numberReplaced++;
+						}
+					}
+				}
+			} catch (Exception e) {
+				System.err.println("Warning: uncaught exception in er regresser (5825683)");
+				e.printStackTrace();
+			}
+			count++;
+		}
+		return adjustedIndicators;
+	}
+	
+	public void executeRegression(ERRegresser regresser) {
+		double bestRating = 0;
+		int consecutiveTimesAtScore = 0;
+		for (EconomicRecord record : items) {
+			regresser.regress(record);
+			double newRating = regresser.getBestRating();
+			if (newRating==bestRating) {
+				consecutiveTimesAtScore++;
+			} else {
+				consecutiveTimesAtScore=0;
+			}
+			bestRating = newRating;
+			if (bestRating>920) {
+				System.out.println("   Stopping regression because we have reached 92% predictability.");
+				break;
+			}
+			if (consecutiveTimesAtScore>100) {
+				System.out.println("   Stopping regression because we have had " +
+						"the same score 100 times in a row.");
+				break;
+			}
+		}
+	}
+}

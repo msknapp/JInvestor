@@ -1,0 +1,116 @@
+package com.KnappTech.sr.ctrl.parse;
+
+import java.io.IOException;
+
+import com.KnappTech.sr.model.comp.Companies;
+import com.KnappTech.sr.model.comp.Company;
+import com.KnappTech.sr.model.comp.Industry;
+import com.KnappTech.sr.model.comp.Sector;
+
+public class TickerReader {
+	private static final transient String URLSTART = "http://www.finviz.com/screener.ashx?v=111&r="; // v is for view, r is for row. Always displays 20 rows.
+	private static final transient String STARTOFTABLESTRING = "class=\"table-dark-row-cp\"";
+	private static final transient String VALIDROWSTRING = "class=\"body-table-nw\"";
+	private static final transient String TICKERPRECEDER = "&amp;b=1\" class=\"tab-link\">";
+	private static final transient String SECTORANDINDUSTRYPRECEDER = "<td height=\"10\" align=\"left\" class=\"body-table-nw\">";
+	
+	private static Companies companies = null;
+	private static int startRow = 1;
+	private static int range = 20;
+	
+	public static int getStartRow() {
+		return startRow;
+	}
+
+	public static void setStartRow(int startRow) {
+		TickerReader.startRow = startRow;
+	}
+
+	public static int getRange() {
+		return range;
+	}
+
+	public static void setRange(int range) {
+		TickerReader.range = range;
+	}
+
+	public static Companies getCompanies() {
+		return companies;
+	}
+
+	public static void setCompanies(Companies companies) {
+		TickerReader.companies = companies;
+	}
+
+	private static String createURL(int row) {
+		String surl = URLSTART + row;
+		return surl;
+	}
+	
+	public static boolean update() {
+		boolean go = true;
+		int row = startRow;
+		while (go && row < startRow+range) {
+			try {
+				String sourceURL = createURL(row);
+				String data = Generic.retrieveWebPage(sourceURL, "GET");
+				go = updateCompanies(data);
+				row += 20;
+			} catch (IOException e) {
+				e.printStackTrace();
+				go = false;
+			} catch (Exception e) {
+				e.printStackTrace();
+				go = false;
+			}
+		}
+		return go;
+	}
+
+	private static boolean updateCompanies(String data) {
+		int startIndex = 0;
+		int endIndex = 0;
+		
+		int ind1 = data.indexOf(STARTOFTABLESTRING);
+		int ind2 = data.indexOf("</table>",ind1);
+		data = data.substring(ind1,ind2);
+		String startOfThisRowString = "";
+		int startOfThisRowIndex=0;
+		
+		boolean go = true;
+		for (int i = 0;i<20;i++){
+			startOfThisRowString = VALIDROWSTRING+">"+(startRow+i)+"<";
+			startOfThisRowIndex = data.indexOf(startOfThisRowString);
+			if (startOfThisRowIndex>=0) {
+				startIndex = data.indexOf(TICKERPRECEDER,startOfThisRowIndex)+TICKERPRECEDER.length();
+				if (startIndex>-1) {
+					data = data.substring(startIndex, data.length());
+					startIndex=0;
+					endIndex = data.indexOf("<",startIndex);
+					String tickerSymbol = data.substring(startIndex,endIndex);
+					
+					// Get the sector.
+					startIndex = data.indexOf(SECTORANDINDUSTRYPRECEDER,endIndex)+SECTORANDINDUSTRYPRECEDER.length();
+					startIndex = data.indexOf(SECTORANDINDUSTRYPRECEDER,startIndex)+SECTORANDINDUSTRYPRECEDER.length();
+					endIndex = data.indexOf("<",startIndex);
+					String sectorName = data.substring(startIndex,endIndex);
+					Sector sctr = Sector.getOrCreate(sectorName);
+					
+					// Get the industry.
+					startIndex = data.indexOf(SECTORANDINDUSTRYPRECEDER,endIndex)+SECTORANDINDUSTRYPRECEDER.length();
+					endIndex = data.indexOf("<",startIndex);
+					String industryName = data.substring(startIndex,endIndex);
+					Industry instr = Industry.getOrCreate(industryName);
+					
+					Company company = Company.create(tickerSymbol, sctr, instr);
+					
+					companies.add(company);
+				}
+			} else { 
+				go = false;
+				i=20;
+			}
+		}
+		return go;
+	}
+}

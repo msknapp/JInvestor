@@ -1,0 +1,6 @@
+package com.kt.model;
+
+public interface KTObject 
+extends SemiKTO,
+	Lockable {
+}

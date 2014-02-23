@@ -1,0 +1,7 @@
+package com.kt.sr.model.Regressable;
+
+public interface RecordFilter {
+	public boolean acceptable(RecordList<? extends Record> record);
+	public RecordSet<? extends RecordList<? extends Record>> getCurrentRecords();
+	public void setCurrentRecords(RecordSet<? extends RecordList<? extends Record>> records);
+}

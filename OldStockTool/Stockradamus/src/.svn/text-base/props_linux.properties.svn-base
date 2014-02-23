@@ -1,0 +1,33 @@
+# Properties that might change if the file structure changes, 
+# such as when it is deployed to a different machine.
+windowsBaseDirectory=C:\\Documents and Settings\\Michael Knapp\\StockData
+linuxBaseDirectory=/home/michael/StockData
+companyDirectory=CompanyData
+companyFile=Companies.txt
+priceHistoryDirectory=PriceHistoryData
+priceHistoryFile=PriceHistories.txt
+financialHistoryDirectory=FinancialHistoryData
+economicRecordDirectory=EconomicRecordData
+economicRecordFile=EconomicRecords.txt
+industryFile=Industries.txt
+sectorFile=Sectors.txt
+downloadDirectory=Downloads
+downloadFile=webData.txt
+blsSeriesFile=BLSSeries.txt
+frbSeriesFile=FRBSeries.txt
+slfSeriesFile=SLFSeries.txt
+imfSeriesFile=IMFSeries.txt
+reportDirectory=Reports
+reportTemplate=template.html
+objectStorageBasePath=objects
+industryDirectory=
+industryDirectory=IndustryData
+sectorDirectory=
+sectorDirectory=SectorData
+reportOutputDirectory=ReportOutput
+financialEntryTypesDirectory=FinancialEntryTypesData
+acceptableCompanies=AcceptableCompanies.txt
+portfolioTickers=PortfolioTickers
+otherDirectory=Other
+sqlUserID=msknapp
+sqlUserPassword=@%47CTitrf

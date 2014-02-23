@@ -1,0 +1,431 @@
+package com.kt.sr.model.comp;
+
+//import java.io.IOException;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.Set;
+
+import org.apache.commons.math.MathException;
+import org.apache.commons.math.distribution.NormalDistributionImpl;
+
+import com.kt.model.KTObject;
+import com.kt.model.LiteDate;
+import com.kt.sr.model.AbstractSKTSet;
+import com.kt.sr.model.Regressable.EconomicRecord;
+import com.kt.sr.model.Regressable.EconomicRecords;
+import com.kt.sr.model.Regressable.Record;
+import com.kt.sr.model.Regressable.RecordList;
+import com.kt.sr.model.Regressable.RecordSet;
+import com.kt.sr.model.constants.RegressionMethod;
+import com.kt.sr.model.user.ScoringMethod;
+import com.kt.sr.persistence.EconomicRecordManager;
+import com.kt.sr.view.report.ReportSettingsHelper;
+import com.kt.view.report.ReportCell;
+import com.kt.view.report.ReportFormat;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class RegressionResult extends AbstractSKTSet<Indicator> implements
+		KTObject {
+	private static final long serialVersionUID = 201001162015L;
+    private RegressionMethod regressionMethod = RegressionMethod.AGGRESSIVE;
+	private LiteDate creationDate = LiteDate.getOrCreate();
+    public double regressandVariance = -1;
+	private double estimateValue = -1;
+	private LiteDate estimateDate = LiteDate.getOrCreate(1988,0,1);
+	private double coefficientOfDetermination = 0;
+	
+	public RegressionResult() {
+		creationDate = LiteDate.getOrCreate();
+	}
+	
+	@Override
+	public String toString() {
+		String str = "";
+		double sum = 0;
+		for (Indicator indicator : items) {
+			str += indicator.toString() + "\n";
+			sum+=indicator.getProduct();
+		}
+		if (str.isEmpty()) {
+			str = "I am an empty regression.";
+		} else {
+			str+="Estimate: "+sum;
+		}
+		return str;
+	}
+	
+    public double getRegressandVariance() {
+		return regressandVariance;
+	}
+
+	public void setRegressandVariance(double regressandVariance) {
+		this.regressandVariance = regressandVariance;
+	}
+
+    public LinkedList<Double> getRegressionParameters() {
+		LinkedList<Double> factors = new LinkedList<Double>();
+		Iterator<Indicator> iter = items.iterator();
+		while (iter.hasNext()) {
+			factors.add(iter.next().getFactor());
+		}
+		return factors;
+	}
+
+	public LinkedList<Double> getRegressionParameterStandardErrors() {
+		LinkedList<Double> errors = new LinkedList<Double>();
+		Iterator<Indicator> iter = items.iterator();
+		while (iter.hasNext()) {
+			errors.add(iter.next().getError());
+		}
+		return errors;
+	}
+
+//	@Override
+//	public int compareTo(KTObject o) {
+//		if (o instanceof RegressionResult) {
+//			RegressionResult r = (RegressionResult)o;
+//			return (int) (regressandVariance-r.regressandVariance);
+//		} else {
+//			return o.getID().compareTo(getID());
+//		}
+//	}
+
+	public void setRegressionMethod(RegressionMethod regressionMethod) {
+		this.regressionMethod = regressionMethod;
+	}
+
+	public RegressionMethod getRegressionMethod() {
+		return regressionMethod;
+	}
+
+	public void setCreationDate(LiteDate creationDate) {
+		this.creationDate = creationDate;
+	}
+
+	public LiteDate getCreationDate() {
+		return creationDate;
+	}
+
+	@Override
+	public String getID() {
+		return "";
+	}
+	
+	/**
+	 * Loads all of the regressable items that act as indicators for this
+	 * regression results.  After these load, you will have all of the 
+	 * records you need to make an estimate.
+	 * @return
+	 */
+	public RecordSet<? extends RecordList<? extends Record>> loadRecords() {
+		RecordSet<? extends RecordList<? extends Record>> records = loadEconomicRecords();
+		// In future when there are other types of indicator sets, they will also be
+		// loaded here, and added to the record list.
+		return records;
+	}
+	
+	/**
+	 * Loads all of the economic records necessary for 
+	 * this regression to make a prediction.
+	 * @return
+	 */
+	public EconomicRecords loadEconomicRecords() {
+		EconomicRecords records = new EconomicRecords();
+		Set<String> indicators = getERIndicatorIDs();
+		try {
+			records = EconomicRecordManager.getAllThatAreStored(indicators);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		if (records==null || records.isEmpty()) {
+			System.err.println("Warning: retrieved a null/empty set of records.");
+		}
+		return records;
+	}
+	
+	/**
+	 * Has the estimate calculated and then stored locally so it can
+	 * be used later if necessary.  Also updates the estimate date.
+	 */
+	public void updateEstimate() {
+		estimateValue = calculateEstimate();
+		if (estimateValue<0) {
+			System.err.println("Warning: produced a negative estimate.");
+		}
+		estimateDate = LiteDate.getOrCreate();
+	}
+	
+	/**
+	 * Performs calculation to determine the current estimate.  Does 
+	 * not store the result anywhere, for that use updateEstimate 
+	 * instead.
+	 * @return
+	 */
+	public double calculateEstimate() {
+		if (!updateLastValues()) {
+			System.err.println("Warning: insufficient data to produce an estimate.");
+		}
+		double sum = 0;
+		for (Indicator indicator : items) {
+			sum+=indicator.getProduct();
+		}
+		return sum;
+	}
+	
+	/**
+	 * Uses the records to update the indicator values.  After this is
+	 * done, you are ready to calculate the estimated value.
+	 * @return
+	 */
+	public boolean updateLastValues() {
+		RecordSet<? extends RecordList<? extends Record>> records = loadRecords();
+		boolean allRecordsFound = (records.containsItems(getIndicatorIDs()));
+		Set<String> indicators = getIndicatorIDs();
+		Double lv = new Double(0);
+		int countOfZeros = 0;
+		if (records.containsItems(indicators)) {
+			for (Indicator indicator : items) {
+				String indicatorID = indicator.getID();
+				RecordList<? extends Record> record = records.get(indicatorID);
+				if (record!=null) {
+					lv = record.getLastValidValue();
+					if (lv!=null) {
+						indicator.setLastValue(lv);
+//						break;
+					} else {
+						countOfZeros++;
+					}
+				}
+			}
+		}
+		if (countOfZeros>1) { // one may be legitimate, but many? idk...
+			System.err.format("Warning: There were %d indicators whose last value was zero.",countOfZeros);
+		}
+		return allRecordsFound;
+	}
+	
+	public double getZ(double x, double average) {
+		return getZ(x,average,getStandardDeviation());
+	}
+	
+	public double getStandardDeviation() {
+		return Math.sqrt(regressandVariance);
+	}
+
+	public static double getZ(double x, double average, double standardDeviation) {
+		if (standardDeviation>0) {
+			double z = (x-average)/standardDeviation;
+			return z;
+		} else {
+			System.err.println("tried dividing by zero to determine Z.");
+		}
+		return 0;
+	}
+	
+	public static double getProbabilityIncrease(double z) {
+		NormalDistributionImpl n = new NormalDistributionImpl(0,1);
+		try {
+			return 1-n.cumulativeProbability(z);
+		} catch (MathException e) {
+			defaultStaticExceptionHandler(e);
+		}
+		return 0;
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		ReportRow row = new ReportRow();
+		String format = settings.dateFormat;
+		if (!items.isEmpty()) {
+			if (regressionMethod==null) regressionMethod=RegressionMethod.COEFFOFDET;
+			row.add(new ReportCell("regression method",regressionMethod.name()));
+			row.add(new ReportCell("creation date",creationDate.getFormatted(format)));
+			row.add(new ReportCell("regressand variance",regressandVariance,ReportFormat.THREEDECIMAL));
+			row.add(new ReportCell("regression parameters",getRegressionParameters().toString()));
+			row.add(new ReportCell("regression errors",getRegressionParameterStandardErrors().toString()));
+			row.add(new ReportCell("number of indicators",String.valueOf(items.size())));
+			row.add(new ReportCell("r2",String.valueOf(coefficientOfDetermination)));
+			if (settings.getEstimate) {
+				double lv = settings.lastValue;
+				double est = getUpToDateEstimate();
+				double z = getZ(lv,estimateValue,getStandardDeviation());
+				double p = getProbabilityIncrease(z);
+				double roi = getROI(lv,estimateValue);
+				double stdev = getStandardDeviation();
+				row.add(new ReportCell("estimate",est,ReportFormat.USCURRENCY));
+				row.add(new ReportCell("estimate date",getEstimateDate().getFormatted(format)));
+				row.add(new ReportCell("standard deviation",stdev,ReportFormat.USCURRENCY));
+				row.add(new ReportCell("percent of value",stdev/est,ReportFormat.PERCENT));
+				row.add(new ReportCell("z",z,ReportFormat.THREEDECIMAL));
+				row.add(new ReportCell("probability of increase",p,ReportFormat.PERCENT));
+				row.add(new ReportCell("roi",roi/100,ReportFormat.PERCENT));
+				if (settings.calculateScore) {
+					ScoringMethod sm = ReportSettingsHelper.getInvestor(settings).getScoringMethod();
+					sm.setShortMode(settings.shortMode);
+					int score = sm.getScore(this,
+							ReportSettingsHelper.getFinancialHistory(settings),
+							ReportSettingsHelper.getPriceHistory(settings));
+					row.add(new ReportCell("score",String.valueOf(score)));
+				}
+			}
+		}
+		return row;
+	}
+
+	public static double getROI(double lv, double estimateValue) {
+		return 100*((estimateValue/lv)-1);
+	}
+
+//	public void setIndicators(LinkedHashSet<String> indicators) {
+//		for (String indicator : indicators) {
+//			add(new Indicator(indicator));
+//		}
+//	}
+
+	public void setIndicators(Collection<Indicator> indicators) {
+		items.clear();
+		addAll(new LinkedHashSet<Indicator>(indicators));
+	}
+	
+	public LinkedHashSet<String> getERIndicatorIDs() {
+		LinkedHashSet<Indicator> indicators = getERIndicators();
+		Iterator<Indicator> iter = indicators.iterator();
+		LinkedHashSet<String> ids = new LinkedHashSet<String>();
+		while (iter.hasNext()) {
+			ids.add(iter.next().getID());
+		}
+		return ids;
+	}
+
+	public LinkedHashSet<Indicator> getERIndicators() {
+		LinkedHashSet<Indicator> erIndicators = new LinkedHashSet<Indicator>();
+		for (Indicator erInd : items) {
+			if (erInd.getTypeClass().equals(EconomicRecord.class)) {
+				erIndicators.add(erInd);
+			}
+		}
+		return erIndicators;
+	}
+	
+	public LinkedHashSet<Indicator> getIndicators() {
+		return new LinkedHashSet<Indicator>(items);
+	}
+	
+	public LinkedHashSet<String> getIndicatorIDs() {
+		LinkedHashSet<String> indicators = new LinkedHashSet<String>();
+		Iterator<Indicator> iter = items.iterator();
+		while (iter.hasNext()) {
+			indicators.add(iter.next().getID());
+		}
+		return indicators;
+	}
+
+	public void setEstimateValue(double estimateValue) {
+		this.estimateValue = estimateValue;
+	}
+	
+	public double getUpToDateEstimate() {
+		LiteDate present = LiteDate.getOrCreate();
+		if (estimateValue<0 || estimateDate==null || estimateDate.before(present)) {
+			updateEstimate();
+		}
+		return estimateValue;
+	}
+
+	public double getEstimateValue() {
+		return estimateValue;
+	}
+
+	public void setEstimateDate(LiteDate estimateDate) {
+		this.estimateDate = estimateDate;
+	}
+
+	public LiteDate getEstimateDate() {
+		return estimateDate;
+	}
+	
+	private static void defaultStaticExceptionHandler(Exception e) {
+		System.err.format("An exception was thrown by thread %s, in class %s, method %s%n" +
+				"   type: %s, message: %s%n" +
+				"   ", Thread.currentThread().getName(),"SRRegressionResults",
+				Thread.currentThread().getStackTrace()[2].getMethodName(),
+				e.getClass(),e.getMessage());
+	}
+	
+	@Override
+	public boolean isValid() { return validateRegressionResult(); }
+
+	private boolean validateRegressionResult() {
+		String problems = "";
+		if (regressionMethod==null) {
+			problems+="The regression method is null.\n";
+		}
+		if (creationDate==null || creationDate.after(LiteDate.getOrCreate())) {
+			problems+="The creation date is invalid/null.\n";
+		}
+		if (regressandVariance<=0) {
+			problems += "The variance is <= 0.\n";
+		}
+		if (!problems.isEmpty()) {
+			System.err.format("While validating the type: %s%n" +
+					"   found the following problems: %n%s%n", getClass().getName(),problems);
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Tells you if the regression is accurate to a certain percent.
+	 * @param i
+	 * @return
+	 */
+	public boolean isAccurateTo(int i) {
+		double acc = 0;
+		try {
+			double est = getEstimateValue();
+			if (est<0) return false;
+			double stdev = getStandardDeviation();
+			acc = 100*(est-stdev)/est;
+		} catch (Exception e) {
+			// does nothing.
+		}
+		return acc>i;
+	}
+	
+	public boolean isR2GreaterThan(double otherR2) {
+		return (coefficientOfDetermination>otherR2);
+	}
+
+	public void setCoefficientOfDetermination(double coefficientOfDetermination) {
+		this.coefficientOfDetermination = coefficientOfDetermination;
+	}
+
+	public double getCoefficientOfDetermination() {
+		return coefficientOfDetermination;
+	}
+
+	@Override
+	public int compareTo(String o) {
+		return 0;
+	}
+
+	@Override
+	public boolean save(boolean multiThread) throws InterruptedException {
+		return false;
+	}
+	
+	public String seeMath() {
+		String s = "";
+		double sum = 0;
+		for (Indicator indicator : this.items) {
+			sum+=indicator.getProduct();
+			s+=indicator.getID()+": last value="+indicator.getLastValue()+", factor="+
+				indicator.getFactor()+", product="+indicator.getProduct()+", sum="+
+				sum+"\n";
+		}
+		return s;
+	}
+}

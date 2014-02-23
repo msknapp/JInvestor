@@ -1,0 +1,50 @@
+package com.kt.sr.ctrl.parse;
+
+import java.io.IOException;
+import java.util.Calendar;
+
+import com.kt.model.LiteDate;
+import com.kt.sr.model.Regressable.EconomicRecord;
+import com.kt.sr.model.constants.SourceAgency;
+import com.kt.util.ConnectionCreater;
+
+public abstract class ERParser {
+	protected EconomicRecord record = null;
+	protected String data = "";
+
+	public void update(EconomicRecord economicRecord) throws InterruptedException {
+		record = economicRecord;
+		LiteDate fiveDaysAgo = LiteDate.getOrCreate(Calendar.DAY_OF_MONTH,-5);
+		LiteDate lsu = record.getLastSuccessfulUpdate();
+		if (lsu==null || lsu.before(fiveDaysAgo)) {
+			record.setLastAttemptedUpdate(LiteDate.getOrCreate());
+//			String sourceURL = createURL();
+			try {
+				if (!isConstantURL() || data.equals("")) {
+					data = Generic.retrieveWebPage(getConnectionCreater());
+				}
+				updateER();
+				record.setLastSuccessfulUpdate(LiteDate.getOrCreate());
+			} catch (IOException e) {
+				// TODO manage io exception
+				e.printStackTrace();
+			} catch (Exception e) {
+				if (e instanceof InterruptedException) {
+					throw (InterruptedException)e;
+				}
+				// TODO manage exception
+				e.printStackTrace();
+			}
+		} else { 
+			System.out.println("Skipping update for "+record.getID()+
+					", it was last successfully updated on "+
+					record.getLastSuccessfulUpdate().toString());
+		}
+	}
+	
+	public abstract SourceAgency getSourceAgency();
+	protected abstract ConnectionCreater getConnectionCreater();
+	protected abstract boolean isConstantURL();
+	
+	protected abstract void updateER() throws InterruptedException;
+}

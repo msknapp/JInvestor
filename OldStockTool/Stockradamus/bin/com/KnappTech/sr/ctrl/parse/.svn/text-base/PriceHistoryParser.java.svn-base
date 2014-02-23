@@ -1,0 +1,112 @@
+package com.kt.sr.ctrl.parse;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.Scanner;
+
+import com.kt.model.LiteDate;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.util.KTTimer;
+
+public class PriceHistoryParser {
+	private static PriceHistory priceHistory = null;
+	
+	public static PriceHistory getPriceHistory() {
+		return priceHistory;
+	}
+
+	public static void setPriceHistory(PriceHistory priceHistory) {
+		PriceHistoryParser.priceHistory = priceHistory;
+	}
+	
+	public static String createURL() {
+		LiteDate lastPriceDate = null;
+		if (!priceHistory.isEmpty()) {
+			lastPriceDate = priceHistory.getLastDateWithValidValue();
+		}
+		if (lastPriceDate==null) {
+			lastPriceDate = LiteDate.getOrCreate(1988,0,1);
+		}
+		LiteDate currentDate = LiteDate.getOrCreate(Calendar.DAY_OF_MONTH, 1);
+		String ticker = priceHistory.getID();
+		String sourceURL = "http://ichart.finance.yahoo.com/table.csv?s="+ticker+"&d="+
+		currentDate.getMonth()+"&e="+currentDate.getDay()+"&f="+currentDate.getYear()+
+		"&g=d&a="+lastPriceDate.getMonth()+"&b="+lastPriceDate.getDay()+
+		"&c="+lastPriceDate.getYear()+"&ignore=.csv";
+		return sourceURL;
+	}
+
+	public static void update() {
+		try {
+			LiteDate lastTradeDate = LiteDate.getMostRecentTradingDay(LiteDate.getOrCreate());
+			if (priceHistory.isEmpty() || priceHistory.getLastDateWithValidValue().before(lastTradeDate)) {
+				String sourceURL = createURL();
+				priceHistory.setLastAttemptedUpdate(LiteDate.getOrCreate());
+				String data = Generic.retrieveWebPage(sourceURL, "GET");
+				updatePH(data);
+				priceHistory.setLastSuccessfulUpdate(LiteDate.getOrCreate());
+			}
+		} catch (FileNotFoundException e) {
+			System.err.println("Cannot update "+priceHistory.getID());
+		} catch (IOException e) {
+			e.printStackTrace();
+			String msg = "Exception caught while updating a price history: "+e.getMessage() + "\nclass: "+e.getClass();
+			System.err.println(msg);
+		} catch (Exception e) {
+			e.printStackTrace();
+			String msg = "Exception caught while updating a price history: "+e.getMessage() + "\nclass: "+e.getClass();
+			System.err.println(msg);
+		}
+	}
+	
+	public static void updatePH(String data) {
+		String msg="We are trying to update the price history for "+priceHistory.getID()+", but it is taking a while...";
+		KTTimer timer = new KTTimer("price update notifier",10,msg,false);
+		
+		String format = "yyyy-MM-dd";
+		Scanner sc = new Scanner(data).useDelimiter("[,\\s]");
+		SimpleDateFormat sdf = new SimpleDateFormat(format);
+		LiteDate entryDate = null;
+		LiteDate nextDate = null;
+		String str = "";
+		while (sc.hasNext()){
+			try {
+				str = sc.next();
+				
+				try { // to manage the dates involved.
+					String dateString = str.substring(str.length()-10, str.length());
+					Date date = sdf.parse(dateString);
+					GregorianCalendar gcdate = new GregorianCalendar();
+					gcdate.setTime(date);
+					entryDate = nextDate;
+					nextDate = LiteDate.getOrCreate(gcdate);
+					str = str.substring(0, str.length()-10);
+					for (int i = 0;i<5;i++){
+						sc.next();
+					}
+				} catch (ParseException e) {
+					// TODO figure out how to handle this parse exception.
+				} catch (Exception e) {
+					// TODO figure out how to handle this exception.
+				}
+				if (!sc.hasNext()) {
+					entryDate = nextDate;
+				}
+				
+				double value = Double.parseDouble(str);
+				if (entryDate!=null) {
+//					priceHistory.addAtDate(entryDate, value);
+					priceHistory.addOrReplace(entryDate, value);
+				}
+			} catch (Exception e) {
+				// TODO write exception handler.
+			}
+		}
+		timer.stop();
+	}
+}

@@ -1,0 +1,60 @@
+package com.kt.sr.ctrl.acq;
+
+import com.kt.sr.model.Regressable.PriceHistories;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.model.comp.Companies;
+import com.kt.sr.persistence.CompanyManager;
+import com.kt.sr.persistence.PriceHistoryManager;
+
+public class PriceHistoryRetriever {
+	private static final char startChar = 'A';//N,T
+	private static final char endChar = 'Z';
+	private static final boolean runForWholeMarket=true;
+	private static final boolean runForLetters=true;
+	
+	public static void main(String[] args) {
+		int i = 65;
+		
+		try {
+			if (runForWholeMarket) {
+				runForLetter('^');
+			}
+		} catch (Exception e) {
+			System.err.println("Unhandled exception thrown when " +
+					"running price history retriever for ^.");
+		}
+		if (runForLetters) {
+			for (i=(int)startChar;i<=(int)endChar;i++) {
+				try {
+					runForLetter((char)i);
+				} catch (Exception e) {
+					System.err.println("Unhandled exception thrown when " +
+							"running price history retriever for "+(char)i);
+				}
+			}
+		}
+	}
+	
+	private static void runForLetter(char letter) {
+		CompanyManager.clear();
+		PriceHistoryManager.clear();
+		Companies companies = null;
+		PriceHistories histories = null;
+		try {
+			companies = CompanyManager.getEverythingStored(letter);
+			histories = PriceHistoryManager.getEverythingStored(letter);
+			System.out.println("FYI: finished loading all companies.");
+		} catch (Exception e) {
+			System.err.println("Price History Retriever failed to load companies " +
+					"and price histories.");
+		}
+		
+		for (String name : companies.getIDs()) {
+			if (!histories.has(name)) {
+				PriceHistory history = PriceHistory.create(name);
+				histories.add(history);
+			}
+		}
+		histories.update();
+	}
+}

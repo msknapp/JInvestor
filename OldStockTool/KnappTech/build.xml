@@ -1,0 +1,52 @@
+<project name="knapptech" basedir="." default="deploy">
+	
+	<property name="java-home.dir" value="C:\Program Files\Java"/>
+	<property name="math.jar" value="${java-home.dir}/commons-math-2.1/commons-math-2.1.jar"/>
+	<property name="jdk.dir" value="${java-home.dir}/jdk1.6.0_20"/>
+	<property name="java.bin.dir" value="${jdk.dir}/bin"/>
+	<property name="java" value="${java.bin.dir}/java"/>
+	<property name="javac" value="${java.bin.dir}/javac.exe"/>
+	<property name="build.dir" value="C:\Documents and Settings\Michael Knapp\build"/>
+	<property name="jar.dir" value="${build.dir}\jar"/>
+	<property name="workspace.dir"  value="C:\Documents and Settings\Michael Knapp\workspace"/>
+	
+	<property name="temp.dir" value="temp"/>
+	<property name="src.dir" value="src"/>
+	<property name="classes.dir" value="${temp.dir}\classes"/>
+	<property name="lib.dir" location="../lib"/>
+	
+	<path id="classpath">
+		<fileset dir="${lib.dir}/apache">
+			<include name="**.jar"/>
+		</fileset>
+	</path>
+	
+	<target name="compile">
+		<!-- Should work fine with nothing else. -->
+		<delete dir="${classes.dir}"/>
+		<mkdir dir="${classes.dir}"/>
+		<echo message="${lib.dir}"/>
+		<javac srcdir="${src.dir}" destdir="${classes.dir}">
+			<classpath refid="classpath"/>
+		</javac>
+		<echo message="Finished compiling KnappTech"/>
+	</target>
+	
+	<target name="jar" depends="compile">
+		<!-- Should work fine with nothing else. -->
+        <jar destfile="${temp.dir}/${ant.project.name}.jar" 
+        	basedir="${classes.dir}">
+        	<manifest>
+        		<attribute name="Class-Path" value="lib/commons-math-2.2.jar "/>
+        	</manifest>
+			<include name="**/*.class"/>
+        </jar>
+		<echo message="Finished jarring KnappTech"/>
+	</target>
+	
+	<target name="deploy" depends="jar">
+		<delete file="../lib/knapptech/${ant.project.name}.jar"/>
+		<copy file="${temp.dir}/${ant.project.name}.jar" todir="../lib/knapptech"/>
+		<delete dir="${temp.dir}"/>
+	</target>
+</project>

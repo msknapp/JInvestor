@@ -1,0 +1,111 @@
+package com.KnappTech.model;
+
+import com.KnappTech.view.report.ReportRow;
+import com.KnappTech.view.report.ReportSettings;
+
+/**
+ * Describes how frequently something is updated.
+ * @author msknapp
+ *
+ */
+public enum UpdateFrequency {
+	HOURLY (3600000L),
+	DAILY (86400000L),
+	WEEKLY (604800000L),
+	BIWEEKLY (1209600000L),
+	MONTHLY (2629800000L),
+	BIMONTHLY (5259600000L),
+	QUARTERLY (7889400000L),
+	SEMIANNUALLY (15778800000L),
+	ANNUALLY (31557600000L);
+	
+	private long approximateDelta = 0;
+	
+	private UpdateFrequency(long approximateDelta) {
+		this.approximateDelta = approximateDelta;
+	}
+	
+	public String deflate() {
+		UpdateFrequency[] uf = values();
+		for (int i = 0;i<uf.length;i++) {
+			if (uf[i] == this) {
+				return String.valueOf(i);
+			}
+		}
+		return "-1";
+	}
+	
+	public static UpdateFrequency inflate(String portion) {
+		int i = Integer.parseInt(portion);
+		UpdateFrequency[] uf = values();
+		return uf[i];
+		// TODO Check that this logic works.
+	}
+	
+	public static UpdateFrequency estimate(LiteDate first, LiteDate second) {
+		long f = first.getDate().getTimeInMillis();
+		long s = second.getDate().getTimeInMillis();
+		long diff = s-f;
+		long hourlyDiff = 1000*60*60;
+		long dailyDiff = hourlyDiff*24;
+		long weeklyDiff = dailyDiff*7;
+		long monthlyDiff = 2592000000L; // 30*24*60*60*1000;
+		
+		if (0<diff && diff<=12*hourlyDiff) {
+			return UpdateFrequency.HOURLY;
+		} else if (12*hourlyDiff<diff && diff<=3*dailyDiff) {
+			return UpdateFrequency.DAILY;
+		} else if (3*dailyDiff<diff && diff<=weeklyDiff+3*dailyDiff) {
+			return UpdateFrequency.WEEKLY;
+		} else if (weeklyDiff+3*dailyDiff<diff && diff<=3*weeklyDiff) {
+			return UpdateFrequency.BIWEEKLY;
+		} else if (3*weeklyDiff<diff && diff<=1.5*monthlyDiff) {
+			return UpdateFrequency.MONTHLY;
+		} else if (1.5*monthlyDiff<diff && diff<=2.5*monthlyDiff) {
+			return UpdateFrequency.BIMONTHLY;
+		} else if (2.5*monthlyDiff<diff && diff<=4.5*monthlyDiff) {
+			return UpdateFrequency.QUARTERLY;
+		} else if (4.5*monthlyDiff<diff && diff<=9*monthlyDiff) {
+			return UpdateFrequency.SEMIANNUALLY;
+		} else {
+			return UpdateFrequency.ANNUALLY;
+		}
+	}
+	
+	public long getApproximateDelta() {
+		return approximateDelta;
+	}
+	
+	public static UpdateFrequency parse(String uf) {
+		UpdateFrequency[] ufs = values();
+		for (int i = 0;i<ufs.length;i++) {
+			if (ufs[i].name().equalsIgnoreCase(uf)) {
+				return ufs[i];
+			}
+		}
+		return null;
+	}
+
+	public byte getIndex() {
+		UpdateFrequency[] ufs = values();
+		for (byte i = 0;i<ufs.length;i++) {
+			if (ufs[i].name().equalsIgnoreCase(name())) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	
+	public static UpdateFrequency createFromIndex(byte i) {
+		UpdateFrequency[] ufs = values();
+		return ufs[i];
+	}
+
+	public boolean isLessFrequent(UpdateFrequency leastFrequent) {
+		return getApproximateDelta()>leastFrequent.getApproximateDelta();
+	}
+
+	public boolean isMoreFrequent(UpdateFrequency leastFrequent) {
+		return getApproximateDelta()<leastFrequent.getApproximateDelta();
+	}
+}

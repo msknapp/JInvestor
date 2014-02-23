@@ -1,0 +1,177 @@
+package com.kt.sr.model.user;
+
+import com.kt.sr.model.Financial.FinancialHistory;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.model.comp.RegressionResult;
+import com.kt.util.CheckedVariable;
+
+public class ScoringMethod {
+	private boolean shortMode = false;
+	private boolean willingToShort = true;
+	private double minimumCoefficentOfDetermination = 0.8;
+	
+	public ScoringMethod() {
+		
+	}
+	
+	public int getScore(RegressionResult r, FinancialHistory f,PriceHistory ph) {
+		double lastValue = ph.getLastValidValue();
+		double estimate = r.getUpToDateEstimate();
+		double estimateValue = r.getUpToDateEstimate();
+		double stdev = r.getStandardDeviation();
+		double z = RegressionResult.getZ(lastValue,estimateValue,stdev);
+		double pIncrease = RegressionResult.getProbabilityIncrease(z);
+		double roi = RegressionResult.getROI(lastValue,estimateValue);
+		double r2 = r.getCoefficientOfDetermination();
+		
+		double dScore = 100;
+		// Filter out predictions that appear ridiculous:
+		boolean valid = isValid(z, roi, lastValue, estimate, pIncrease, stdev, r2, f);
+		if (valid) {
+			FinancialHistory financial = f;
+			CheckedVariable currentRatio = financial.getCurrentRatio();
+			CheckedVariable dividendPerShare = financial.getTTMDividendPerShare();
+			CheckedVariable profitMargin = financial.getProfitMargin();
+			CheckedVariable debtPerAssets = financial.getTotalLiabilitiesPerTotalAssets();
+			int strategyMultiplier = ((roi<0 && lastValue>5) ? -1 : 1);
+			if (strategyMultiplier>0 && shortMode) {
+				dScore-=1000;
+			}
+			double v = (roi>0 ? 1 : -1)*2*Math.pow(Math.abs(roi),0.5);
+			if (strategyMultiplier>0)
+			{	// use a long strategy to evaluate this company.
+				dScore+=v*Math.pow(r2, 2);
+			} else 
+			{	// use a short strategy to evaluate this company.
+				if (lastValue>10) {
+					dScore+=(-v)*Math.pow(r2, 2);
+				} else if (lastValue>5) { // difficult to short
+					dScore+=(-v)*0.5*Math.pow(r2, 2);
+				} else { // impossible to take advantage of.
+					dScore-=100;
+				}
+			}
+			
+			// adjust based on the current ratio
+			if (currentRatio.isValid()) {
+				double cr = currentRatio.getValue();
+				double dpa = 0;
+				if (debtPerAssets.isValid()) {
+					dpa = debtPerAssets.getValue();
+				}
+				if (cr<=0.8) { // dangerous current ratio.
+					dScore += -10*strategyMultiplier;
+					if (dpa>1) {
+						dScore += -50*strategyMultiplier;
+					} else if (dpa>0 && dpa<0.6) {
+						dScore += 5*strategyMultiplier;
+					}
+				} else if (cr<=1) { // bad current ratio
+					dScore += -10*(1-cr)*5*strategyMultiplier;
+					if (dpa>1) {
+						dScore += -30*strategyMultiplier;
+					} else if (dpa>0 && dpa<0.6) {
+						dScore += 5*strategyMultiplier;
+					}
+				} else if (cr<2) { // 
+					dScore += 10*(cr-1)*strategyMultiplier;
+					if (dpa<1) {
+						dScore += 5*strategyMultiplier;
+					}
+					dScore += -1.5*dpa*strategyMultiplier;
+				} else {
+					dScore+=10*strategyMultiplier;
+					if (dpa<1) {
+						dScore += 10*strategyMultiplier;
+					}
+					dScore += -1.5*dpa*strategyMultiplier;
+				}
+			} else {
+				dScore-=30;
+			}
+			
+			// adjust for profit margin
+			if (profitMargin.isValid()) {
+				double pm = profitMargin.getValue();
+				if (Math.abs(pm)<0.20) {
+					dScore += 50*pm*strategyMultiplier;
+				} else if (pm<0) {
+					dScore += -10*strategyMultiplier;
+				} else {
+					dScore += 10*strategyMultiplier;
+				}
+			} else {
+				dScore-=10;
+			}
+		
+			// adjust for dividends
+			if (dividendPerShare.isValid() && lastValue>0) {
+				double divPerShare = dividendPerShare.getValue();
+				double dividendPerDollar = divPerShare/lastValue;
+				if (divPerShare>0 && dividendPerDollar<1) {
+					dScore += 98*dividendPerDollar*strategyMultiplier;
+				} else if (dividendPerDollar>=1) {
+					dScore += 10*strategyMultiplier;
+				}
+			}
+			
+			// adjust for FCFE
+			double y = financial.getImpliedYearsRemaining(ph.getBeta(), lastValue);
+			if (y<50) {
+				dScore += (15-y*(3/5))*strategyMultiplier;
+			} else {
+				dScore += -15*strategyMultiplier;
+			}
+			if (r2<0.8) {
+				dScore-=500*(0.8-r2);
+			}
+		} else {
+			dScore = -500;
+		}
+		return (int)(Math.round(100*dScore));
+	}
+	
+	protected boolean isValid(double z, double roi, double lastValue, double estimate,
+			double pIncrease,double stdev,double r2, FinancialHistory financialHistory) {
+		if (lastValue>0 && Math.abs(z)<3.3 && 
+				r2>minimumCoefficentOfDetermination &&
+				stdev>0 && Math.abs(roi)<200 && financialHistory!=null) {
+			if (isWillingToShort() || roi>0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public void setShortMode(boolean b) {
+		this.shortMode=b;
+	}
+
+	public void setWillingToShort(boolean willingToShort) {
+		this.willingToShort = willingToShort;
+	}
+
+	public boolean isWillingToShort() {
+		return willingToShort;
+	}
+
+	public void setMinimumCoefficentOfDetermination(
+			double minimumCoefficentOfDetermination) {
+		this.minimumCoefficentOfDetermination = minimumCoefficentOfDetermination;
+	}
+
+	public double getMinimumCoefficentOfDetermination() {
+		return minimumCoefficentOfDetermination;
+	}
+	
+	public static class NoShortingScoringMethod extends ScoringMethod {
+		protected boolean isValid(double z, double roi, double lastValue, double estimate,
+				double pIncrease,double stdev,double r2, FinancialHistory financialHistory) {
+			if (z<0) {
+				return super.isValid(z, roi, lastValue, estimate, 
+						pIncrease, stdev, r2, financialHistory);
+			}
+			return false;
+		}
+	}
+}

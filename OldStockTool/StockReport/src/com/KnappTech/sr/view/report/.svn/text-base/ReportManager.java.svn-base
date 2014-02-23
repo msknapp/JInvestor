@@ -1,0 +1,259 @@
+package com.kt.sr.view.report;
+
+import java.util.Collection;
+import java.util.LinkedHashSet;
+
+import com.kt.model.ReportableSet;
+import com.kt.sr.model.PropertyManager;
+import com.kt.sr.model.Regressable.EconomicRecord;
+import com.kt.sr.model.Regressable.EconomicRecords;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.model.comp.Companies;
+import com.kt.sr.model.comp.Company;
+import com.kt.sr.model.constants.SourceAgency;
+import com.kt.sr.persistence.CompanyManager;
+import com.kt.sr.persistence.EconomicRecordManager;
+import com.kt.sr.persistence.FinancialEntryTypesManager;
+import com.kt.sr.persistence.FinancialHistoryManager;
+import com.kt.sr.persistence.IndustryManager;
+import com.kt.sr.persistence.PriceHistoryManager;
+import com.kt.sr.persistence.SectorManager;
+import com.kt.view.report.Report;
+import com.kt.view.report.ReportSettings;
+
+public class ReportManager {
+	private static final char startChar = 'A';
+	private static final char endChar = 'Z';
+	private static final boolean runForLetters=true;
+	private static ReportSettings settings = null;
+	private static ReportableSet reportableSet = null;
+	
+	
+	// decide on the reportableset class to use,
+	// decide on the settings to use.
+	// Then tell report builder those things
+	public static void main(String[] args) {
+		produceReportOnMyPortfolio();
+		produceIndustryReport();
+//		produceCompanyReport(true);
+		produceCompanyReport();
+//		produceReportOnIndicators();
+	}
+	
+	public static void produceIndustryReport() {
+		settings = ReportSettingsHelper.defaultForAllIndustries();
+		Report report = new Report(settings);
+		System.out.println("Building the report for all industries.");
+		report.addAll(createCompanyReportForLetter('^'));
+		report.order();
+		report.display();
+		report.produceCSV("Industry");
+		System.out.println("The report should be displaying now.");
+	}
+	
+	public static void produceCompanyReport() {
+		produceCompanyReport(false);
+	}
+	
+	public static void produceCompanyReport(boolean shortMode) {
+		settings = ReportSettingsHelper.defaultForAllCompanies();
+		Report report = new Report(settings);
+		if (runForLetters) {
+			for (int i = (int)startChar;i<=(int)endChar;i++) {
+				try {
+					char letter = (char)i;
+					System.out.println("Now working on report for letter "+letter);
+					report.addAll(createCompanyReportForLetter(letter,shortMode));
+					report.keepBest(200);
+				} catch (Exception e) {
+					System.err.println("Exception thrown by create company report for letter," +
+							" see details below");
+					e.printStackTrace();
+				}
+			}
+		}
+		System.out.println("Finished building the report for all letters.");
+		report.order();
+		report.display();
+		report.produceCSV("company");
+		System.out.println("The report should be displaying now.");
+	}
+	
+	public static void produceReportOnMyPortfolio() {
+		settings = ReportSettingsHelper.defaultForAllCompanies();
+		settings.includeCompaniesWithoutRegression=true;
+		Report report = new Report(settings);
+		Collection<String> portfolioTickers = PropertyManager.loadPortfolioTickers();
+		FinancialEntryTypesManager.Load();
+		Companies companies=null;
+		try {
+			companies = CompanyManager.getAllThatAreStored(portfolioTickers);
+			PriceHistoryManager.getAllThatAreStored(portfolioTickers);
+			FinancialHistoryManager.getAllThatAreStored(portfolioTickers);
+			SectorManager.Load();
+			IndustryManager.Load();
+			FinancialEntryTypesManager.Load();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		report.addAll(companies.getReport(settings));
+		report.order();
+		report.display();
+		report.produceCSV("Portfolio");
+		System.out.println("The report should be displaying now.");
+	}
+	
+	public static void produceReportOnIndicators() {
+		try {
+			settings = ReportSettingsHelper.defaultForIndicators();
+			Report report = new Report(settings);
+			char startChar = '^';
+			char endChar = '^';
+			for (int i = (int)startChar;i<(int)endChar;i++) {
+				EconomicRecords ers;
+					ers = EconomicRecordManager.getEverythingStored((char)i);
+				report.addAll(ers.getReport(settings));
+			}
+			report.order();
+			report.display();
+			report.produceCSV("Indicators");
+			System.out.println("The report should be displaying now.");
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static Report createCompanyReportForLetter(char letter) {
+		return createCompanyReportForLetter(letter,false);
+	}
+	
+	public static Report createCompanyReportForLetter(char letter,boolean shortMode) {
+		settings = ReportSettingsHelper.defaultForAllCompanies();
+		settings.shortMode = shortMode;
+		Report report = new Report(settings);
+		try {
+			// clear some memory.
+			CompanyManager.clear();
+			PriceHistoryManager.clear();
+			FinancialHistoryManager.clear();
+			
+			Companies companies = CompanyManager.getEverythingStored(letter);
+			PriceHistoryManager.getEverythingStored(letter);
+			FinancialHistoryManager.getEverythingStored(letter);
+			report.addAll(companies.getReport(settings));
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		return report;
+	}
+	
+	public static void buildReport() {
+//		reportableSet = reportableSet.load();
+		if (reportableSet!=null) {
+			Report report = reportableSet.getReport(settings);
+			report.order();
+			report.display();
+		} else {
+			System.err.println("Record not found.");
+		}
+	}
+	
+	public static void prepareFor(String reportType) {
+		if (reportType.toLowerCase().equals("companies")) {
+			prepareToReportOnCompanies();
+		} else if (reportType.toLowerCase().equals("view_record")) {
+			prepareToReportOnEconomicRecord();
+		} else if (reportType.toLowerCase().equals("view_price_history")) {
+			prepareToReportOnPriceHistory();
+		} else if (reportType.toLowerCase().equals("view_company")) {
+			prepareToReportOnCompany();
+		}
+	}
+	
+	private static void prepareToReportOnCompany() {
+		String tickerSymbol = "A";
+		
+		try {
+			PriceHistoryManager.getIfStored(tickerSymbol);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		settings = new ReportSettings();
+		Company company;
+		try {
+			company = CompanyManager.getIfStored(tickerSymbol);
+			company.setPriceHistory(PriceHistoryManager.getIfStored(tickerSymbol));
+			reportableSet = company;
+			LinkedHashSet<String> columns = new LinkedHashSet<String>();
+			columns.add("attribute");
+			columns.add("value");
+			settings.includeFinancialHistory = false;
+			settings.sortRowsByAttributeName = "attribute";
+			settings.setSortBy("date");
+			settings.getColumns().addAll(columns);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Allows you to see a report on an economic record, to use
+	 * just change the recordID variable in the first line of 
+	 * the method, and adjust the main method, then run.
+	 */
+	private static void prepareToReportOnEconomicRecord() {
+		String recordID = "PCU332991332991";
+		
+		settings = new ReportSettings();
+		EconomicRecord record = EconomicRecord.createInstance(recordID, SourceAgency.BLS);
+		reportableSet = record;
+		LinkedHashSet<String> columns = new LinkedHashSet<String>();
+		columns.add("date");
+		columns.add("value");
+		settings.sortRowsByAttributeName = "date";
+		settings.setSortBy("date");
+		settings.getColumns().addAll(columns);
+	}
+
+	/**
+	 * Allows you to see a report on an economic record, to use
+	 * just change the recordID variable in the first line of 
+	 * the method, and adjust the main method, then run.
+	 */
+	private static void prepareToReportOnPriceHistory() {
+		String ticker = "A";
+		
+		settings = new ReportSettings();
+		PriceHistory history = PriceHistory.create(ticker);
+		reportableSet = history;
+		LinkedHashSet<String> columns = new LinkedHashSet<String>();
+		columns.add("date");
+		columns.add("value");
+		settings.sortRowsByAttributeName = "date";
+		settings.setSortBy("date");
+		settings.getColumns().addAll(columns);
+	}
+
+	public static void prepareToReportOnCompanies() {
+//		try { 
+//			reportableSet = new SRCompanySet(
+//					CompanyManager.getInstance().loadEverything());
+//			SRSectorSet.setAllSectors(
+//					new SRSectorSet(SectorManager.getInstance().loadEverything()));
+//			SRIndustrySet.setAllIndustries(
+//					new SRIndustrySet(IndustryManager.getInstance().loadEverything()));
+//			CompanyManager inst = CompanyManager.getInstance();
+//			System.out.print("hi");
+//		} catch (InterruptedException e) {
+//			
+//		}
+		settings = ReportSettingsHelper.defaultForAllCompanies();
+	}
+	
+	public static void ProduceCompanyReport() {
+		prepareToReportOnCompanies();
+		buildReport();
+	}
+}

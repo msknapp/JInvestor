@@ -1,0 +1,26 @@
+package com.kt.sr.persistence;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+
+import com.kt.sr.model.Regressable.EconomicRecord;
+import com.kt.sr.model.Regressable.Record;
+import com.kt.sr.persistence.ERHistoryEntry;
+
+public class ERHistory implements Serializable {
+	private static final long serialVersionUID = 201011071238L;
+	public ERHistoryEntry[] hist = null;
+	
+	public ERHistory() {}
+	
+	public ERHistory(EconomicRecord ph) {
+		ArrayList<ERHistoryEntry> entries = new ArrayList<ERHistoryEntry>();
+		Record r = ph.getFirstValidRecord();
+		while (r!=null) {
+			ERHistoryEntry he = new ERHistoryEntry(r.getDate(),r.getValue().doubleValue());
+			entries.add(he);
+			r = ph.getFollowingRecord(r);
+		}
+		hist = entries.toArray(new ERHistoryEntry[entries.size()]);
+	}
+}

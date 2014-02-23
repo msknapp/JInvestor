@@ -1,0 +1,167 @@
+package com.KnappTech.sr.view;
+
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+
+import com.KnappTech.sr.model.Financial.FinancialHistory;
+import com.KnappTech.sr.model.Regressable.PriceHistory;
+import com.KnappTech.sr.model.Regressable.Record;
+import com.KnappTech.sr.model.Regressable.RecordList;
+import com.KnappTech.sr.model.comp.Company;
+import com.KnappTech.sr.persist.PersistenceRegister;
+
+public class RecordListBodyPanel {
+	private static final String VIEWCOMPANYCOMMAND = "vc";
+	private static final String VIEWFINANCIALHISTORYCOMMAND = "vfh";
+	private static RecordListBodyPanel instance = null;
+	private JPanel panel = null;
+	private JPanel listPanel = null;
+	private JPanel metaPanel = null;
+	private RecordList<? extends Record> recordHistory = null;
+	private JTable recordTable = null;
+	private ActionListener actionListener = null;
+	
+	private RecordListBodyPanel() {
+		
+	}
+	
+	public static final JPanel getInstance(RecordList<? extends Record> recordHistory) {
+		if (instance==null) {
+			instance = new RecordListBodyPanel();
+		}
+		instance.recordHistory = recordHistory;
+		instance.build();
+		return instance.panel;
+	}
+
+	private void build() {
+		// build the panel
+		if (panel!=null) {
+			panel.removeAll();
+		} else {
+			panel = new JPanel();
+		}
+		panel.setLayout(new BoxLayout(panel,BoxLayout.X_AXIS));
+		panel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+		panel.add(Box.createRigidArea(new Dimension(5,0)));
+		buildListPanel();
+		panel.add(listPanel);
+		panel.add(Box.createRigidArea(new Dimension(5,0)));
+		buildMetaPanel();
+		panel.add(metaPanel);
+	}
+
+	private void buildListPanel() {
+		listPanel = new JPanel();
+		listPanel.setLayout(new BoxLayout(listPanel,BoxLayout.Y_AXIS));
+		listPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+		JLabel titleLabel = new JLabel("Record History:");
+		titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		listPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		listPanel.add(titleLabel);
+		listPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		String[] columnNames = {"Date:","Value:"};
+		String[][] entries = recordHistory.getEntriesArray();
+		recordTable = new JTable(entries,columnNames);
+		recordTable.setMaximumSize(new Dimension(300,99999));
+		recordTable.setMinimumSize(new Dimension(300,1));
+		recordTable.setFillsViewportHeight(true);
+		
+		JScrollPane scroller = new JScrollPane(recordTable);
+		scroller.setMinimumSize(new Dimension(300,1));
+		scroller.setMaximumSize(new Dimension(300,99999));
+		scroller.setPreferredSize(new Dimension(300,99999));
+		scroller.setAlignmentX(Component.LEFT_ALIGNMENT);
+		listPanel.add(scroller);
+		listPanel.add(Box.createRigidArea(new Dimension(0,5)));
+	}
+
+	private void buildMetaPanel() {
+		metaPanel = new JPanel();
+		metaPanel.setLayout(new BoxLayout(metaPanel,BoxLayout.Y_AXIS));
+		metaPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+		metaPanel.setMinimumSize(new Dimension(300,1));
+		metaPanel.setMaximumSize(new Dimension(300,Integer.MAX_VALUE));
+		metaPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		JLabel metaLabel = new JLabel("Meta Data");
+		metaPanel.add(metaLabel);
+		metaPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		try {
+			addToMetaPanel("ID:",recordHistory.getID());
+			addToMetaPanel("Source Agency:",recordHistory.getSourceAgency().name());
+			addToMetaPanel("Update Frequency:",recordHistory.getUpdateFrequency().name());
+			addToMetaPanel("Start Date:",recordHistory.getStartDate().toString());
+			addToMetaPanel("End Date:",recordHistory.getEndDate().toString());
+			addToMetaPanel("Last Update:",recordHistory.getLastSuccessfulUpdate().toString());
+			addToMetaPanel("Last Attempted Update:",recordHistory.getLastAttemptedUpdate().toString());
+			
+			if (this.recordHistory instanceof PriceHistory) {
+				PriceHistory ph = (PriceHistory)recordHistory;
+				addToMetaPanel("Beta:", String.valueOf(ph.getBeta()));
+				actionListener = new MyActionListener();
+				addButtonToMetaPanel("View Company", VIEWCOMPANYCOMMAND);
+				addButtonToMetaPanel("View Financial History", VIEWFINANCIALHISTORYCOMMAND);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void addToMetaPanel(String name, String value) {
+		JPanel p = new JPanel();
+		p.setLayout(new BoxLayout(p, BoxLayout.X_AXIS));
+		p.setAlignmentX(Component.LEFT_ALIGNMENT);
+		JLabel lb = new JLabel(name);
+		JLabel lb2 = new JLabel(value);
+		p.add(lb);
+		p.add(Box.createRigidArea(new Dimension(5,0)));
+		p.add(lb2);
+		metaPanel.add(p);
+		metaPanel.add(Box.createRigidArea(new Dimension(0,5)));
+	}
+
+	private void addButtonToMetaPanel(String name, String actionCommand) {
+		JButton b = new JButton(name);
+		b.setActionCommand(actionCommand);
+		b.addActionListener(actionListener);
+		b.setAlignmentX(Component.LEFT_ALIGNMENT);
+		metaPanel.add(b);
+		metaPanel.add(Box.createRigidArea(new Dimension(0,5)));
+	}
+	
+	private class MyActionListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			String actionCommand = arg0.getActionCommand();
+			try {
+				if (actionCommand.equals(VIEWCOMPANYCOMMAND)) {
+					Company c;
+						c = PersistenceRegister.company().getIfStored(recordHistory.getID(),false);
+					if (c!=null) {
+						MainDisplay.setModelObject(c);
+					}
+				} else if (actionCommand.equals(VIEWFINANCIALHISTORYCOMMAND)) {
+					FinancialHistory fh = PersistenceRegister.financial().getIfStored(recordHistory.getID(),false); 
+					if (fh!=null) {
+						MainDisplay.setModelObject(fh);
+					}
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+}

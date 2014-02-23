@@ -1,0 +1,183 @@
+package com.kt.sr.ctrl.reg;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Set;
+
+import com.kt.model.LiteDate;
+import com.kt.sr.model.PropertyManager;
+import com.kt.sr.model.Regressable.EconomicRecords;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.model.comp.Company;
+import com.kt.sr.model.comp.RegressionResults;
+import com.kt.sr.persistence.CompanyManager;
+import com.kt.sr.persistence.EconomicRecordManager;
+import com.kt.util.CodeStalker;
+import com.kt.util.ThreadManager;
+
+public class RegressionManager implements Runnable {
+	// -XX:+UseParallelGC
+	
+	private static final char startChar = 'A';
+	private static final char endChar = 'Z';
+	private static final boolean runForWholeMarket=true;
+	private static final boolean runForLetters=true;
+	public static final int COMPANIESPERTHREAD = 50;
+	public static ArrayList<String> claimedCompanies = new ArrayList<String>();
+	private Set<String> companyIDs = null;
+	private LiteDate maxStartDate = LiteDate.getOrCreate(Calendar.YEAR,-10);
+	private static final ThreadManager threadManager = new ThreadManager(26);
+	
+	public RegressionManager() {
+	}
+	
+	public static void main(String[] args) {
+//		executeForPortfolio();
+		execute();
+	}
+	
+	public static void executeForPortfolio() {
+		try {
+			RegressionManager fr = new RegressionManager();
+			EconomicRecords allEconomicRecords;
+				allEconomicRecords = EconomicRecordManager.getEverythingStored(false);
+			allEconomicRecords.removeUselessRecords(true);
+			
+			Collection<String> portfolioTickers = PropertyManager.loadPortfolioTickers();
+			for (String ticker : portfolioTickers) {
+				fr.regressCompany(ticker);
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void execute() {
+		try {
+			EconomicRecords allEconomicRecords = EconomicRecordManager.getEverythingStored(false);
+			allEconomicRecords.removeUselessRecords(true);
+			
+			int i = 65;
+			if (runForLetters) {
+				for (i=(int)startChar;i<=(int)endChar;i++) {
+					try {
+						executeForLetter((char)i);
+					} catch (Exception e) {
+						System.err.println("Exception caught in fast regresser when trying " +
+								"to execute for letter "+(char)i);
+						e.printStackTrace();
+					}
+				}
+			}
+			try {
+				if (runForWholeMarket) {
+					executeForLetter('^');
+				}
+			} catch (Exception e) {
+				System.err.println("Exception caught in fast regresser when trying " +
+						"to execute for letter ^");
+				e.printStackTrace();
+			}
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+	}
+	
+	private static void executeForLetter(char letter) {
+		try {
+			RegressionManager fr = new RegressionManager();
+			fr.setCompanyIDs(CompanyManager.getAllStoredIDs(letter));
+			threadManager.queue(fr);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void run() {
+		for (String companyID : getCompanyIDs()) {
+			regressCompany(companyID);
+		}
+		System.out.format("FYI: the thread %s is stopping because it is finished.",Thread.currentThread().getName());
+	}
+	
+	public void regressCompany(String id) {
+		try {
+			Company company = CompanyManager.getIfStored(id);
+//			company.getRegressionResultsSet().clear();
+			if (company!=null) {
+				ERRegresser erRegresser = new ERRegresser();
+				if (company!=null && company.isValid()) {
+					company.loadPriceHistory();
+					PriceHistory history = company.getPriceHistory();
+					if (history!=null) {
+						if (history.size()>100 && !history.getStartDate().after(maxStartDate)) {
+							if (history.isValid()) {
+								boolean go = true;
+								if (company.getRegressionResultsSet()!=null) {
+									RegressionResults rrs = company.getRegressionResultsSet();
+									LiteDate minDate = LiteDate.getOrCreate().addMonths(-1);
+									if (!rrs.isEmpty() && rrs.getMostRecent().getCreationDate().after(minDate)
+											&& rrs.getMostAccurate().isR2GreaterThan(0.5)) {
+										go = false;
+									}
+								}
+								if (go) {
+									erRegresser.executeRegression(company);
+									if (company.isValid()) {
+										CompanyManager.save(company,true);
+									
+										if (PropertyManager.BUGFINDMODE) {
+											CodeStalker cs = CodeStalker.createReadOnly();
+											System.out.println(cs.toString());
+										}
+										// Integrity test:
+										// re-load the company and verify that all fields are 
+										// exactly the same:
+	//									SRCompany recoveredCompany = DataManager.loadCompany(company.getID());
+	//									System.out.println("Now compare the recovered company with the old. "+recoveredCompany.toString());
+									} else {
+										System.err.println("Warning: modified the company to be invalid!");
+									}
+								} else {
+									System.out.println("FYI: The company "+company.getID()+" has a recent " +
+											"regression result stored so we are skipping it.");
+								}
+							} else {
+								System.out.println("FYI: The price history data was invalid for "
+										+company.getID()+" so we are skipping it.");
+							}
+						} else {
+							System.out.println("FYI: The price history data was insufficient for "
+									+company.getID()+" so we are skipping it.");
+						}
+					} else {
+						System.err.println("Warning: the loaded history data was null for "+company.getID());
+	//					else if (history.size()<100) System.err.println("Warning: the loaded history data has less than 100 entries for "+company.getID());
+	//					else System.err.println("Warning: the loaded history data for "+company.getID()+" does " +
+	//							"not start before the required "+maxStartDate.toString());
+					}
+					CompanyManager.remove(company.getID());
+				} else {
+					if (company==null) {
+						System.err.println("Warning: the company loaded was null!");
+					} else { 
+						System.err.println("Warning: The company loaded failed validation. "+company.getID());
+					}
+				}
+			}
+		} catch (Exception e) {
+			System.err.println("Warning: Uncaught exception in the fast regressers main while loop.");
+			e.printStackTrace();
+		}
+	}
+
+	public void setCompanyIDs(Set<String> companyIDs) {
+		this.companyIDs = companyIDs;
+	}
+
+	public Set<String> getCompanyIDs() {
+		return companyIDs;
+	}
+}

@@ -1,0 +1,120 @@
+package com.kt.sr.model;
+
+import java.util.Collection;
+import java.util.List;
+
+import com.kt.model.ReportableSet;
+import com.kt.model.LiteDate;
+import com.kt.model.TimeFrame;
+import com.kt.model.UpdateFrequency;
+import com.kt.sr.model.Regressable.Record;
+import com.kt.sr.model.Regressable.RecordList;
+import com.kt.sr.model.comp.Currency;
+import com.kt.sr.model.constants.SourceAgency;
+import com.kt.view.report.Report;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class Commodity extends RecordList<Record> implements Asset {
+	private static final long serialVersionUID = 201001181259L;
+
+	private Commodity(String id, SourceAgency sourceAgency) {
+		super(id,sourceAgency);
+	}
+	
+	private Commodity(String id, SourceAgency sourceAgency,Collection<Record> c) {
+		super(id,sourceAgency,c);
+	}
+	
+	private Commodity(Commodity original) {
+		super(original);
+	}
+
+	public static final Commodity createInstance(String id, SourceAgency sourceAgency) {
+		if (id!=null && id.length()>0 && sourceAgency!=null) {
+			return new Commodity(id,sourceAgency);
+		}
+		return null;
+	}
+
+	public static final Commodity createInstance(String id, SourceAgency sourceAgency,Collection<Record> c) {
+		if (id!=null && id.length()>0 && sourceAgency!=null) {
+			return new Commodity(id,sourceAgency,c);
+		}
+		return null;
+	}
+	
+	public Commodity clone() {
+		return new Commodity(this);
+	}
+	
+	@Override
+	public int compareTo(String o) {
+		return 0;
+	}
+
+	@Override
+	public List<Double> asFrequency(UpdateFrequency updateFrequency) {
+		// TODO make commodity as frequency work.
+		return null;
+	}
+
+	@Override
+	public void getRegressableList(LiteDate startDate, LiteDate endDate,
+			UpdateFrequency updateFrequency, int offset) {
+		// TODO get a regressable list 
+
+	}
+
+	@Override
+	public boolean isMultiple() {
+		// TODO is multiple
+		return false;
+	}
+
+	@Override
+	public boolean canBeNegative() {
+		return false;
+	}
+
+	@Override
+	public String getID() {
+		return "";
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		return super.getReportRow(settings);
+	}
+
+	@Override
+	public Report getReport(ReportSettings settings) {
+		return super.getReport(settings);
+	}
+	
+	@Override
+	public boolean isValid() { return true; }
+
+	@Override
+	public Currency getValueOfShare() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void update() throws InterruptedException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Record createRecord(LiteDate date, double value) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public TimeFrame getTimeFrame() {
+		return new TimeFrame(getStartDate(),getEndDate());
+	}
+}

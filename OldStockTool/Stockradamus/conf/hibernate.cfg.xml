@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+    "-//Hibernate/Hibernate Configuration DTD//EN"
+    "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <!-- a SessionFactory instance listed as /jndi/name -->
+    <session-factory name="java:hibernate/SessionFactory">        
+    	<!-- Database connection settings -->
+        <property name="connection.driver_class">com.mysql.jdbc.Driver</property>
+        <property name="connection.url">jdbc:mysql://localhost:3306/stockdata</property>
+        <property name="connection.username">root</property>
+        <property name="connection.password">&amp;*36AEalms</property>
+        <!-- properties -->
+        <property name="dialect">org.hibernate.dialect.MySQLDialect</property>
+        <property name="show_sql">true</property>
+        <property name="current_session_context_class">thread</property>
+        <property name="hbm2ddl.auto">update</property>
+        
+        <!-- <property name="transaction.factory_class">
+            org.hibernate.transaction.JTATransactionFactory
+        </property>
+        <property name="connection.datasource">java:/comp/env/jdbc/MyDB</property>
+        <property name="jta.UserTransaction">java:comp/UserTransaction</property> -->
+        
+        <!-- mapping files -->
+        <mapping resource="com.kt.sr.model.beans.CompanyBean.hbm.xml"/>
+        
+        <!-- cache settings
+        <class-cache class="tst/SportsBall" usage="read-write"/> -->
+    </session-factory>
+</hibernate-configuration>

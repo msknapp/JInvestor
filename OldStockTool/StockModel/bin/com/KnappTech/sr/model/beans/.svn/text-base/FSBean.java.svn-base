@@ -1,0 +1,48 @@
+package com.kt.sr.model.beans;
+
+import java.io.Serializable;
+
+import com.kt.sr.model.Financial.FinancialStatement;
+import com.kt.sr.model.constants.StatementType;
+
+public class FSBean implements Serializable {
+	private static final long serialVersionUID = 201102052241L;
+
+	private StatementType type = null;
+	private FSAFBean quarterlyStatement = null;
+	private FSAFBean annualStatement = null;
+	
+	public FSBean() {
+		
+	}
+	
+	public FSBean(FinancialStatement fs) {
+		this.setType(fs.getType());
+		this.setQuarterlyStatement(new FSAFBean(fs.getQuarterlyStatement()));
+		this.setAnnualStatement(new FSAFBean(fs.getAnnualStatement()));
+	}
+
+	public void setType(StatementType type) {
+		this.type = type;
+	}
+
+	public StatementType getType() {
+		return type;
+	}
+
+	public void setQuarterlyStatement(FSAFBean quarterlyStatement) {
+		this.quarterlyStatement = quarterlyStatement;
+	}
+
+	public FSAFBean getQuarterlyStatement() {
+		return quarterlyStatement;
+	}
+
+	public void setAnnualStatement(FSAFBean annualStatement) {
+		this.annualStatement = annualStatement;
+	}
+
+	public FSAFBean getAnnualStatement() {
+		return annualStatement;
+	}
+}

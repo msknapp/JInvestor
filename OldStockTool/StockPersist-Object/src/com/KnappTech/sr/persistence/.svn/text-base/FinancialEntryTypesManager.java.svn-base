@@ -1,0 +1,57 @@
+package com.kt.sr.persistence;
+
+import com.kt.sr.model.Financial.FinancialEntryType;
+
+public class FinancialEntryTypesManager extends NamedObjectPersistenceManager<FinancialEntryType> {
+	private static final String FILENAME = "FinancialEntryTypes.txt";
+	private static final FinancialEntryTypesManager instance = new FinancialEntryTypesManager();
+
+	private FinancialEntryTypesManager() {}
+
+	public static int getIndex(String name) {
+//		FinancialEntryType.createInstance(name);
+		return instance.iGetIndex(name);
+	}
+	
+	public static FinancialEntryType getItem(int index) {
+		return instance.iGetItem(index);
+	}
+	
+	public static String getName(int index) {
+		return instance.iGetName(index);
+	}
+	
+	public static final void Save() {
+		instance.save();
+	}
+	
+	public static final void Load() {
+		instance.load();
+	}
+	
+	public static final void LoadIfNecessary() {
+		instance.loadIfNecessary();
+	}
+	
+	public static final void Add(FinancialEntryType ind) {
+		instance.add(ind);
+	}
+	
+	@Override
+	protected String getFileName() {
+		return FILENAME;
+	}
+	
+	public static FinancialEntryTypesManager i() {
+		return instance;
+	}
+
+	@Override
+	protected FinancialEntryType instantiate(String name) {
+		return FinancialEntryType.createInstance(name);
+	}
+	
+	public static final int getSize() {
+		return instance.size();
+	}
+}

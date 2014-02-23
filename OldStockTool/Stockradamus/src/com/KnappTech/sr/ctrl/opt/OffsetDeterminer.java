@@ -1,0 +1,19 @@
+package com.KnappTech.sr.ctrl.opt;
+
+public class OffsetDeterminer {
+	
+	
+	
+	public double determineOffset(int iterations, double distanceBetween,
+			double maxInvestmentInSingleStock) {
+		double offset = maxInvestmentInSingleStock;
+		double period = 50;
+		double o = 0.5+0.5*Math.pow(Math.E, -(iterations/period));
+		if (iterations>10) {
+			offset = Math.min(maxInvestmentInSingleStock/2, distanceBetween*o);
+		} else {
+			offset = maxInvestmentInSingleStock*(1-(double)iterations/20);
+		}
+		return offset;
+	}
+}

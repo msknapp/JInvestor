@@ -1,0 +1,62 @@
+package com.kt.view.report;
+
+public class ReportCell implements Comparable<ReportCell> {
+	private String attributeName = "";
+	private String value = "";
+	
+	public ReportCell(String name, String val) {
+		attributeName = name;
+		value = val;
+	}
+
+	public ReportCell(String name, double val,ReportFormat reportFormat) {
+		attributeName = name;
+		value = reportFormat.format(val);
+	}
+	
+	public void setAttributeName(String attributeName) {
+		this.attributeName = attributeName;
+	}
+	
+	public String getAttributeName() {
+		return attributeName;
+	}
+	
+	public void setValue(String value) {
+		this.value = value;
+	}
+	
+	public String getValue() {
+		return value;
+	}
+
+	@Override
+	public int compareTo(ReportCell o) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	public String toHTMLCell() {
+		String htmlCell = "<td class=\"cell\" name=\""+attributeName+"\">"+value+"</td>";
+		return htmlCell;
+	}
+	
+	@Override
+	public String toString() {
+		String str = attributeName+"="+value;
+		return str;
+	}
+
+	public static String toEmptyHTMLCell(String header) {
+		String htmlCell = "<td class=\"cell\" name=\""+header+"\"></td>";
+		return htmlCell;
+	}
+
+	public String toCSVCell() {
+		return value+",";
+	}
+
+	public static String toEmptyCSVCell() {
+		return ",";
+	}
+}

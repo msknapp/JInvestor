@@ -1,0 +1,43 @@
+package com.kt.sr.model;
+
+import java.util.Collection;
+
+import com.kt.model.KTObject;
+import com.kt.model.KTSet;
+import com.kt.model.Lockable;
+
+public abstract class AbstractKTSet<E extends KTObject> 
+extends AbstractSKTSet<E>
+implements KTSet<E>, Lockable {
+	private static final long serialVersionUID = 201003131133L;
+
+	public AbstractKTSet() {
+		
+	}
+	
+	public AbstractKTSet(Collection<E> items) {
+		super(items);
+	}
+	
+	protected AbstractKTSet(AbstractKTSet<E> otherList) {
+		super(otherList);
+	}
+	
+	protected final synchronized void lockSubObjects(){
+		for (E o : this.items) {
+			o.lock();
+		}
+	}
+	
+	protected final synchronized void unlockSubObjects(){
+		for (E o : this.items) {
+			o.unlock();
+		}
+	}
+	
+	protected final synchronized void permanentlyLockSubObjects() {
+		for (E o : this.items) {
+			o.permanentlyLock();
+		}
+	}
+}

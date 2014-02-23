@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:context="http://www.springframework.org/schema/context"
+  xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+ 	
+ 	<context:property-placeholder location="classpath:download.properties"/>
+ 	
+ 	<bean id="yahooFinancialDownloader" class="stock.download.financial.FinancialDownloader">
+ 		<constructor-arg name="downloadHelper" ref="downloadHelper"/>
+ 		<constructor-arg name="repo" ref="downloadRecordRepo"/>
+ 		<constructor-arg name="threadPool"><null/></constructor-arg>
+ 		<constructor-arg name="outputBuilder" ref="yahooFOB"/>
+ 		<constructor-arg name="responseTransformer" ref="yahooFinancialExtractor"/>
+ 	</bean>
+ 	
+ 	<bean id="yahooFinancialExtractor" class="stock.download.financial.XPathFinancialExtractor">
+ 		<constructor-arg name="xpathExpression" value="${stock.download.financial.yahoo.extractor.xpath}"/>
+ 	</bean>
+ 	
+ 	<bean id="yahooFOB" class="stock.download.financial.YahooFOB">
+ 		<constructor-arg name="pathFormat" value="${stock.download.financial.yahoo.path.format}"/>
+ 	</bean>
+ 
+ 	<bean id="slfDownloader" class="stock.download.IndicatorDownloader">
+ 		<constructor-arg name="outputBuilder" ref="slfOutputBuilder"/>
+ 		<constructor-arg name="downloadHelper" ref="downloadHelper"/>
+ 		<constructor-arg name="timespans"><null/></constructor-arg>
+ 		<constructor-arg name="repo" ref="downloadRecordRepo"/>
+ 	</bean>
+ 	
+ 	<bean id="slfOutputBuilder" class="stock.download.ph.FilePHOutputBuilder">
+ 		<constructor-arg name="format" value="${stock.download.slf.format}"/>
+ 		<constructor-arg name="saveDir" value="/var/local/stock/data/raw"/>
+ 		<constructor-arg name="subDirName" value="indicator/slf"/>
+ 	</bean>
+ 	
+ 	<bean id="slfSeries" class="stock.core.FileLineSource">
+ 		<constructor-arg name="source" value="${stock.download.data.slf.series}"/>
+ 		<constructor-arg name="hasHeader" value="false"/>
+ 	</bean>
+ 
+ 	<bean id="googlePH" class="stock.download.ph.PHDownloader">
+ 		<constructor-arg name="outputBuilder" ref="googleOutputBuilder"/>
+ 		<constructor-arg name="downloadHelper" ref="downloadHelper"/>
+ 		<constructor-arg name="timespans"><null/></constructor-arg>
+ 		<constructor-arg name="repo" ref="downloadRecordRepo"/>
+ 	</bean>
+ 	
+ 	<bean id="googleOutputBuilder" class="stock.download.ph.FilePHOutputBuilder">
+ 		<constructor-arg name="format" value="${stock.download.google.format}"/>
+ 		<constructor-arg name="saveDir" value="/var/local/stock/data/raw"/>
+ 		<constructor-arg name="subDirName" value="ph/google"/>
+ 	</bean>
+ 
+ 	<bean id="yahooPH" class="stock.download.ph.PHDownloader">
+ 		<constructor-arg name="outputBuilder" ref="yahooOutputBuilder"/>
+ 		<constructor-arg name="downloadHelper" ref="downloadHelper"/>
+ 		<constructor-arg name="timespans" ref="yahooTimespans"/>
+ 		<constructor-arg name="repo" ref="downloadRecordRepo"/>
+ 	</bean>
+ 	
+ 	<bean id="yahooOutputBuilder" class="stock.download.ph.FilePHOutputBuilder">
+ 		<constructor-arg name="format" value="${stock.download.yahoo.format}"/>
+ 		<constructor-arg name="saveDir" value="/var/local/stock/data/raw"/>
+ 		<constructor-arg name="subDirName" value="ph/yahoo"/>
+ 	</bean>
+ 	
+ 	<bean id="yahooTimespans" class="stock.download.TimeSpanIterable">
+ 		<constructor-arg name="timeSpan" ref="yahooTimespan"/>
+ 		<constructor-arg name="interval" value="${stock.download.yahoo.timespan.interval}"/>
+ 	</bean>
+ 	
+ 	<bean id="yahooTimespan" class="stock.core.TimeSpan">
+ 		<constructor-arg name="start" value="2003-01-01"/>
+ 	</bean>
+ 	
+ 	<bean id="downloadHelper" class="stock.download.DownloadHelper">
+ 		<constructor-arg name="clientBuilder" ref="clientBuilder"/>
+ 	</bean>
+ 	
+ 	<bean id="tickerSymbolSource" class="stock.core.FileLineSource">
+ 		<constructor-arg name="source" value="${stock.download.data.tickerSymbols.list}"/>
+ 		<constructor-arg name="hasHeader" value="false"/>
+ 	</bean>
+ 	
+ 	<bean id="clientBuilder" class="org.apache.http.impl.client.HttpClientBuilder"
+ 		factory-method="create"/>
+ 		
+ 	<bean id="downloadRecordRepo" class="stock.download.record.InMemDownloadRecordRepo"/>
+</beans>

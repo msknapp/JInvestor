@@ -1,0 +1,47 @@
+package com.kt.sr.model;
+
+import com.kt.model.Identifiable;
+
+public abstract class NamedKTObject implements Identifiable<String> {
+	private static final long serialVersionUID = 201005231910L;
+	private final short id;
+	private final String name;
+	
+	protected NamedKTObject(short id, String name) {
+		this.id=id;
+		this.name = name;
+	}
+	
+	@Override
+	public final String getID() {
+		return String.valueOf(id);
+	}
+	
+	public final short getIDValue() {
+		return id;
+	}
+
+	public final String getName() {
+		return name;
+	}
+	
+	@Override
+	public int hashCode() {
+		int hc = getName().toLowerCase().hashCode();
+		if (hc<Integer.MAX_VALUE){
+			hc++;
+		} else {
+			hc=Integer.MIN_VALUE;
+		}
+		return hc;
+	}
+	
+	@Override
+	public boolean equals(Object object) {
+		if (object instanceof NamedKTObject) {
+			NamedKTObject nkto = (NamedKTObject)object;
+			return getName().equalsIgnoreCase(nkto.getName());
+		}
+		return false;
+	}
+}

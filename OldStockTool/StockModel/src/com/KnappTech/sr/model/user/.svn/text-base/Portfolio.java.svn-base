@@ -1,0 +1,98 @@
+package com.kt.sr.model.user;
+
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+
+import com.kt.model.Lockable;
+import com.kt.model.Reportable;
+import com.kt.model.ReportableSet;
+import com.kt.model.Validatable;
+import com.kt.sr.model.comp.Company;
+import com.kt.sr.model.comp.Currencies;
+import com.kt.sr.model.comp.CurrencyExchanges;
+import com.kt.view.report.Report;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class Portfolio 
+implements Validatable, Lockable, Reportable,ReportableSet {
+	private static final long serialVersionUID = 201004022104L;
+	private final LinkedHashSet<Position> positions = new LinkedHashSet<Position>();
+	private boolean locked = false;
+	private boolean permanentlyLocked = false;
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Report getReport(ReportSettings settings) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	@Override
+	public boolean isValid() { return true; }
+
+	public Currencies getCurrencyInvested() {
+		Currencies currencyInvested = new Currencies();
+		for (Position pos : positions) {
+			currencyInvested.addCurrency(pos.getCurrencyValue());
+		}
+		return currencyInvested;
+	}
+
+	public int getNumberOfShares(Company company) {
+		int numberOfShares = 0;
+		Position pos = getPosition(company);
+		if (pos!=null) {
+			numberOfShares += (int)Math.round(pos.getCurrentQuantity());
+		}
+		return numberOfShares;
+	}
+
+	public Position getPosition(Company company) {
+		for (Position p : positions) {
+			if (p.getAsset().getID().equals(company.getID())) {
+				return p;
+			}
+		}
+		return null;
+	}
+
+	public Collection<? extends String> getCompanyTickers() {
+		HashSet<String> tickers = new HashSet<String>();
+		for (Position p : positions) {
+			if (p.getAsset() instanceof Company) {
+				tickers.add(p.getAsset().getID());
+			}
+		}
+		return tickers;
+	}
+	
+	public final synchronized boolean isLocked() {
+		return locked;
+	}
+	
+	public final synchronized boolean canEdit() {
+		return !locked;
+	}
+	
+	public final synchronized void lock() {
+		locked = true;
+	}
+	
+	public final synchronized void unlock() {
+		if (!permanentlyLocked) {
+			locked = false;
+		}
+	}
+	
+	public final synchronized void permanentlyLock() {
+		permanentlyLocked = true;
+		locked = true;
+	}
+}

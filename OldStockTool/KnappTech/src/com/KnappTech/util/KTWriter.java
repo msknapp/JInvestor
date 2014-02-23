@@ -1,0 +1,277 @@
+package com.KnappTech.util;
+
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.Collection;
+
+/**
+ * This is a very special writer, because it has some 
+ * combined attributes from bufferedwriter, dataoutputstream,
+ * and fileoutputStream.
+ * <p>You create it by giving it a full path to a file, like
+ * a file output stream.  You write to it like a buffered
+ * writer.  When you try writing an int to it, it transfers
+ * that to bytes and stores it their way, like a data output stream.
+ *  
+ * @author msknapp
+ *
+ */
+public class KTWriter extends BufferedOutputStream {
+	private DataOutputStream dos = null;
+	private OutputStreamWriter osw = null;
+	
+	public KTWriter(String fullPath) throws FileNotFoundException {
+		super(makeFileOutputStream(fullPath));
+	}
+	
+	public void initialize() {
+		dos = new DataOutputStream(this);
+		osw = new OutputStreamWriter(this);
+	}
+	
+	private static FileOutputStream makeFileOutputStream(String fullPath) {
+		FileOutputStream fos = null;
+		try {
+			File file = new File(fullPath);
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+			fos = new FileOutputStream(file);
+		} catch (IOException e){
+			System.err.println("IO exception caught while making the writer.");
+		}
+		return fos;
+	}
+	
+	public DataOutputStream stream() {
+		return dos;
+	}
+	
+	public OutputStreamWriter real() {
+		return osw;
+	}
+	
+	public void write(String str) throws IOException {
+		for (int i = 0;i<str.length();i++) {
+			int j = (int)str.charAt(i);
+			super.write(j);
+		}
+	}
+	
+	public void write(short b) throws IOException {
+		dos.writeShort((int)b);
+	}
+	
+	public void writeInt(int b) throws IOException {
+		dos.writeInt(b);
+	}
+	
+	public void write(double b) throws IOException {
+		dos.writeDouble(b);
+	}
+	
+	public void write(byte b) throws IOException {
+		dos.writeByte((int)b);
+	}
+	
+	public void writeCollection(Collection<? extends Object> collection, String elementName){
+		if (collection!=null && !collection.isEmpty()) {
+			for (Object element : collection) {
+				try {
+					if (element!=null && !element.toString().equals("")) {
+						write("<"+elementName+">"+element.toString()+"</"+elementName+">");
+					} else {
+						// say nothing.
+					}
+				} catch (IOException e) {
+					System.err.println("IOException caught while deflating a collection.");
+				}
+			}
+		} else {
+			System.err.println("Writer warning: given a null/empty collection to write.");
+		}
+	}
+
+//	public void writeCPCollection(Collection<? extends CustomPersistable> collection){
+//		writeCPCollection(collection,null,false);
+//	}
+//
+//	public void writeCPCollection(Collection<? extends CustomPersistable> collection, String elementName){
+//		writeCPCollection(collection,elementName,true);
+//	}
+	
+//	public void writeCPCollection(Collection<? extends CustomPersistable> collection, String elementName,boolean writeSubTags){
+//		if (!writeSubTags || (elementName!=null && !elementName.isEmpty())) {
+//			if (collection != null && !collection.isEmpty()) {
+//				for (CustomPersistable element : collection) {
+//					try {
+//						if (element.validated()) {
+//							if (elementName!=null && !elementName.equals("") && writeSubTags)
+//								write("<"+elementName+">");
+////							element.deflate(this);
+//							if (elementName!=null && !elementName.equals("") && writeSubTags)
+//								write("</"+elementName+">");
+//						} else {
+//							System.err.println("Warning: did not write element because it failed validation. "+element.toString());
+//						}
+//					} catch (IOException e) {
+//						System.err.println("IOException caught while deflating a collection.");
+//					}
+//				}
+//			} else {
+//				System.err.println("Writer warning: given a null/empty collection to write.");
+//			}
+//		} else {
+//			System.err.println("Writer warning: given a null/empty element name to write.");
+//		}
+//	}
+	
+	public void prepareFile(String fullPath) {
+		File file = new File(fullPath);
+		try {
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+		} catch (IOException e) {
+			defaultExceptionHandler(e);
+		}
+	}
+	
+	public static void defaultExceptionHandler(Exception e) {
+		String msg = "Exception caught of type: "+e.getClass()+"\n" +
+					"Message: "+e.getMessage()+"\n";
+		System.err.println(msg);
+		e.printStackTrace();
+	}
+	
+	public void writeNextElement(KTReader reader, String elementTag) {
+		if (reader!=null && elementTag!=null && !elementTag.isEmpty()) {
+			char letter = 'a';
+			char deflateStrategyLetter = 'a';
+			int indexOfNumCount = 0;
+			int i = 0;
+			StringBuilder textAlreadyRead = new StringBuilder();
+			String stringNumCount = "";
+			Character c = 'a';
+			int indexOfComma = 0;
+			int count = 0;
+			
+			try {
+				String endString = "</"+elementTag+">";
+				while ((i=reader.read())>-1) {
+					super.write(i);
+					letter = (char)i;
+					textAlreadyRead.append(letter);
+					if (letter==':'){
+						deflateStrategyLetter = 'a'; // by default we abort.
+						for (int j = textAlreadyRead.length()-2;j>-1;j--){
+							c = new Character(textAlreadyRead.charAt(j));
+							if (isValidDeflationLetter(c)) {
+								deflateStrategyLetter = c;
+								indexOfNumCount = j+1;
+								break;
+							} else if (!Character.isDigit(c) && c!=',') {
+								System.err.println("Writer Warning: failed to determine the number " +
+										"deflate strategy while writing the next element.");
+								break; // ABORT!!!
+							}
+						}
+						if (isValidDeflationLetter(deflateStrategyLetter)) {
+							stringNumCount = textAlreadyRead.substring(indexOfNumCount,textAlreadyRead.length()-1);
+							indexOfComma = stringNumCount.indexOf(",");
+							if (indexOfComma>=0) {
+								stringNumCount = stringNumCount.substring(0,indexOfComma);
+							}
+							count = Integer.parseInt(stringNumCount);
+							
+							writeDataForElement(deflateStrategyLetter,reader,count);
+							
+							textAlreadyRead = new StringBuilder();
+						} else {
+							System.err.println("Invalid colon found in read string, count is: "+count+", recent string: "+
+									textAlreadyRead.substring(textAlreadyRead.length()-15));
+						}
+					} else if (textAlreadyRead.length()>endString.length() && 
+							textAlreadyRead.substring(textAlreadyRead.length()-endString.length()).equals(endString))
+					{
+						flush();
+						break;
+					}
+				}
+			} catch (IOException e) {
+				System.err.println("IO exception caught: "+e.getMessage());
+				e.printStackTrace();
+			} catch (NumberFormatException e) {
+				System.err.println("number format exception caught: "+e.getMessage());
+				e.printStackTrace();
+			}
+		} else {
+			System.err.println("Writer warning: the reader was null while trying to write the next element");
+		}
+	}
+	
+	public static boolean isValidDeflationLetter(char deflateStrategyLetter) {
+		return (deflateStrategyLetter=='d' ||
+				deflateStrategyLetter=='i' ||
+				deflateStrategyLetter=='s' ||
+				deflateStrategyLetter=='b');
+	}
+	
+	private void writeDataForElement(char deflateStrategyLetter, KTReader reader,int count) {
+		try {
+			if (deflateStrategyLetter=='d') {
+				for (int j = 0;j<count;j++) {
+					write(reader.readDouble());
+				}
+				dos.flush();
+				flush();
+			} else if (deflateStrategyLetter == 'i') {
+				for (int j = 0;j<count;j++) {
+					writeInt(reader.readInt());
+				}
+				dos.flush();
+				flush();
+			} else if (deflateStrategyLetter == 's') {
+				for (int j = 0;j<count;j++) {
+					write(reader.readShort());
+				}
+				dos.flush();
+				flush();
+			} else if (deflateStrategyLetter == 'b') {
+				for (int j = 0;j<count;j++) {
+					write(reader.readByte());
+				}
+				dos.flush();
+				flush();
+			}
+			
+			// Alternative method:
+//			byte multiplier = 0;
+//			if (deflateStrategyLetter=='d') {
+//				multiplier = (byte)8;
+//			} else if (deflateStrategyLetter=='i') {
+//				multiplier = (byte)4;
+//			} else if (deflateStrategyLetter=='s') {
+//				multiplier = (byte)2;
+//			} else if (deflateStrategyLetter=='b') {
+//				multiplier = (byte)1;
+//			}
+//			short expectedNumberOfBytes = (short) (multiplier*count);
+//			for (int j = 0;j<expectedNumberOfBytes;j++) {
+//				write(reader.readByte());
+//			}
+//			dos.flush();
+//			flush();
+			
+			
+		} catch (IOException e) {
+			System.err.println("IO exception caught: "+e.getMessage());
+			e.printStackTrace();
+		}
+	}
+}

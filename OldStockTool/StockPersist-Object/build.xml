@@ -1,0 +1,70 @@
+<project name="stockpersist-object" basedir="." default="deploy">
+	
+	<property name="src.dir" value="src"/>
+	<property name="temp.dir" value="temp"/>
+	<property name="classes.dir" value="${temp.dir}/classes"/>
+	<property name="libs.dir" value="lib"/>
+	<property name="dist.dir" value="C:/Apps/${ant.project.name}"/>
+		
+	<path id="classpath">
+		<fileset dir="${libs.dir}">
+			<include name="**.jar"/>
+		</fileset>
+	</path>
+	
+	<target name="compile">
+		<!-- Must compile KnappTech project -->
+		<delete dir="${temp.dir}"/>
+		<mkdir dir="${classes.dir}"/>
+		<javac srcdir="${src.dir}" destdir="${classes.dir}">
+			<classpath refid="classpath"/>
+			<include name="**/*.java"/>
+			<include name="**/*.txt"/>
+		</javac>
+		<echo message="Finished compiling Stockradamus"/>
+	</target>
+	
+	<target name="jar" depends="compile">
+		<!--
+		<junit haltonfailure="true" printsummary="true">
+			<classpath>
+				<pathelement path="${antjunit.jar}"/>
+				<pathelement path="${junit.jar}"/>
+				<pathelement path="${classes.dir}/${ant.project.name}"/>
+				<pathelement path="${classes.dir}/KnappTech"/>
+			</classpath>
+			<test name="com.kt.sr.test.junit.TestEconomicRecord"/>
+			<batchtest>
+				<fileset dir="${testsrc.dir}/junit">
+					<include name="**.java"/>
+				</fileset>
+			</batchtest>
+		</junit>-->
+		<pathconvert property="cp" pathsep=" ">
+			<path refid="classpath"/>
+			<map from="${basedir}/" to=""/>
+		</pathconvert>
+        <jar destfile="${temp.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main-class}"/>
+    			<attribute name="Class-Path" value="${cp}"/>
+            </manifest>
+			<include name="**/*.class"/>
+			<include name="**/*.cfg.xml"/>
+        </jar>
+		<echo message="Finished jarring Stockradamus"/>
+	</target>
+	
+	<target name="deploy" depends="jar">
+		<delete dir="${dist.dir}/lib"/>
+		<mkdir dir="${dist.dir}/lib"/>
+		<delete dir="${dist.dir}/conf"/>
+		<mkdir dir="${dist.dir}/conf"/>
+		<delete file="${dist.dir}/${ant.project.name}.jar"/>
+		<copy file="${temp.dir}/${ant.project.name}.jar" todir="${dist.dir}"/>
+		<delete dir="${temp.dir}"/>
+		<mkdir dir="${dist.dir}/lib"/>
+		<copydir dest="${dist.dir}/lib" src="${libs.dir}"/>
+		<mkdir dir="${dist.dir}/conf"/>
+	</target>
+</project>

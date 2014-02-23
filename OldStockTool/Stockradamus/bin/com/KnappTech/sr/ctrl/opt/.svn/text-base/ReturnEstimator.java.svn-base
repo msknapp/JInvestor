@@ -1,0 +1,214 @@
+package com.kt.sr.ctrl.opt;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.math.FunctionEvaluationException;
+import org.apache.commons.math.MathException;
+import org.apache.commons.math.analysis.MultivariateRealFunction;
+import org.apache.commons.math.distribution.NormalDistributionImpl;
+import org.apache.commons.math.linear.MatrixUtils;
+import org.apache.commons.math.linear.RealMatrix;
+
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.model.comp.Company;
+import com.kt.sr.model.comp.RegressionResult;
+import com.kt.sr.model.comp.RegressionResults;
+import com.kt.sr.model.user.Investor;
+import com.kt.util.DataPoints;
+
+public class ReturnEstimator implements MultivariateRealFunction {
+	
+	private Investor investor = null;
+	private ArrayList<Company> companies = null;
+	private static final RegressionChoice regressionChoice = RegressionChoice.MOSTACCURATE;
+	private RealMatrix covarianceMatrix = null;
+	private static final double transactionFee = 4.5; // dollars.
+	
+	/**
+	 * If allow shorting is true, shares can be negative.  If false,
+	 * then they cannot be negative.  Since the optimizer cannot 
+	 * understand domains, the only way to prevent it from using a 
+	 * negative value is to reduce the value returned.  We do this by 
+	 * treating negative shares like they are positive when it comes
+	 * to a cost, but negative when it comes time to estimate the
+	 * final value.
+	 */
+	private static final boolean allowShorting = false;
+	
+
+	@SuppressWarnings("unused")
+	private static final byte percentMarginAllowed = (byte)0;
+
+	public ReturnEstimator(List<Company> companies,Investor investor) {
+		this.companies = new ArrayList<Company>(companies);
+		this.investor = investor;
+		
+		// build the covariance matrix.
+		createCovarianceMatrix();
+		
+	}
+	
+	private void createCovarianceMatrix() {
+		int cSize = companies.size();
+		covarianceMatrix = MatrixUtils.createRealMatrix(cSize, cSize);
+		Company rowCompany = null;
+		Company columnCompany = null;
+		PriceHistory rowHistory = null;
+		PriceHistory columnHistory = null;
+		for (int row = 0;row<companies.size();row++) {
+			rowCompany = companies.get(row);
+			rowHistory = rowCompany.getPriceHistory();
+			for (int column = 0;column<companies.size();column++) {
+				columnCompany = companies.get(column);
+				columnHistory = columnCompany.getPriceHistory();
+				DataPoints dp = columnHistory.getDataPoints(rowHistory);
+				double cov = dp.getCovariance();
+				covarianceMatrix.setEntry(row, column, cov);
+			}
+		}
+	}
+	
+	/**
+	 * Provides the computed return value for the given input values.
+	 * Keep in mind that this function must be continuous.  So if you
+	 * are given inputs that are invalid, you cannot return a hard coded
+	 * answer, you must instead produce a sharp drop in expected return
+	 * value.  The drop in value associated with invalid numbers must 
+	 * guarantee that an invalid set of shares will not be selected.
+	 * @param shares the number of shares held
+	 */
+	@Override
+	public double value(double[] shares) throws FunctionEvaluationException,
+			IllegalArgumentException
+	{
+		double totalCost = computeTotalCost(shares);
+		double moneyRemaining = investor.getDollarsAvailable()-totalCost;
+		double finalValueStandardDeviation = computeStandardDeviation(shares);
+		double finalValue = computeFinalValue(shares);
+		
+		// since we cannot throw an exception when it exceeds the amount of money
+		// we have, we must instead make it progressively lose money.
+		if (moneyRemaining<0) {
+			double excess = -moneyRemaining;
+			double artificialCost = excess*(Math.pow(2, excess));
+			finalValue-=artificialCost;
+		}
+
+		if (finalValue<-100000) {
+			return -100000;
+		}
+		double lowEstimate = computeLowEstimate(finalValue, finalValueStandardDeviation);
+		double lowNetWorth = lowEstimate; // +moneyRemaining;
+		return lowNetWorth;
+	}
+	
+	public double computeStandardDeviation(double[] shares) {
+		RealMatrix sh = MatrixUtils.createColumnRealMatrix(shares);
+		RealMatrix m1 = covarianceMatrix.multiply(sh);
+		RealMatrix sol = sh.transpose().multiply(m1);
+		double vr = sol.getEntry(0, 0);
+		double sd = Math.pow(vr, 0.5);
+		return sd;
+	}
+	
+	/**
+	 * Gets the final value of the collection of shares.
+	 * @param shares
+	 * @return
+	 */
+	public double computeFinalValue(double[] shares) {
+		double finalValue = 0;
+		Company company = null;
+		double finalValueOfShare = 0;
+		for (int i = 0;i<companies.size();i++) {
+			if (shares[i]>=1) {
+				company = companies.get(i);
+				RegressionResults rrs = company.getRegressionResultsSet();
+				RegressionResult rs = null;
+				if (regressionChoice==RegressionChoice.MOSTACCURATE) {
+					rs = rrs.getMostAccurate();
+				} else if (regressionChoice==RegressionChoice.MOSTRECENT) {
+					rs = rrs.getMostRecent();
+				} else {
+					System.err.println("Warning: given invalid regression choice.");
+					rs = rrs.getMostAccurate();
+				}
+				finalValueOfShare = rs.getUpToDateEstimate();
+				if (finalValueOfShare < 0.01) {
+					System.err.println("The final value of the share of "
+							+company.getID()+" is unknown, the optimizer will fail.");
+				}
+				finalValue += finalValueOfShare*shares[i];
+			} else {
+				// does nothing.
+			}
+		}
+		return finalValue;
+	}
+
+	private double computeTotalCost(double[] shares) {
+		double totalCost = 0;
+		double cost = 0;
+		double share = 0;
+		double value = 0;
+		Company company = null;
+		for (int i = 0;i<companies.size();i++) {
+			company = companies.get(i);
+			share = shares[i];
+			value = company.getPriceHistory().getLastValidValue();
+			if (value>0) {
+				if (share>=1) {
+					cost = transactionFee+share*value;
+				} else if (share>=0 && share<1) {
+					cost = share*(transactionFee+value);
+				} else if (share<0 && share>-1) {
+					if (allowShorting) {
+						cost = share*(transactionFee+value);
+					} else { // not allowed to short
+						cost = -share*(transactionFee+value);
+					}
+				} else { // share<-1
+					if (allowShorting) {
+						// you will actually get a negative cost most of the time,
+						// meaning you earned money shorting.
+						cost = transactionFee+share*value;
+					} else { // not allowed to short
+						// pretend that the shares are positive.
+						// so it appears that you pay for the shares, while 
+						// the final value is still negative.
+						cost = transactionFee+Math.abs(share)*value;
+					}
+				}
+			} else if (share>0) {
+				System.err.println("When computing total cost, this is trying to use " +
+						"a positive number of shares for a company whose price is unknown.");
+				cost = 0;
+			}
+			totalCost+=cost;
+		}
+		return totalCost;
+	}
+	
+	public double computeLowEstimate(double finalValue, 
+			double finalValueStandardDeviation)
+	{
+		double lowEstimate = 0;
+		if (finalValueStandardDeviation>0) {
+			NormalDistributionImpl n = new NormalDistributionImpl
+						(finalValue, finalValueStandardDeviation);
+			try {
+				lowEstimate = n.inverseCumulativeProbability(0.1);
+			} catch (MathException e) {
+				e.printStackTrace();
+			}
+		} else {
+			return finalValue;
+		}
+		return lowEstimate;
+	}
+
+	private enum RegressionChoice {
+		MOSTRECENT, MOSTACCURATE;
+	}
+}

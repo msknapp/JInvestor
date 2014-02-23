@@ -1,0 +1,70 @@
+<project name="stockreport" basedir="." default="deploy">
+	
+	<property name="src.dir" value="src"/>
+	<property name="temp.dir" value="temp"/>
+	<property name="classes.dir" value="${temp.dir}/classes"/>
+	<property name="libs.dir" location="../lib"/>
+	<property name="main-class" value="com.kt.sr.ctrl.StartManager"/>
+	<property name="dist.dir" value="C:/Apps/${ant.project.name}"/>
+		
+	<path id="classpath">
+		<fileset dir="${libs.dir}/knapptech">
+			<include name="**.jar"/>
+		</fileset>
+		<fileset dir="${libs.dir}/knapptech/stock">
+			<include name="**.jar"/>
+		</fileset>
+	</path>
+	
+	<target name="compile">
+		<!-- Must compile KnappTech project -->
+		<delete dir="${temp.dir}"/>
+		<mkdir dir="${classes.dir}"/>
+		<javac srcdir="${src.dir}" destdir="${classes.dir}">
+			<classpath refid="classpath"/>
+			<include name="**/*.java"/>
+			<include name="**/*.txt"/>
+		</javac>
+		<echo message="Finished compiling Stockradamus"/>
+	</target>
+	
+	<target name="jar" depends="compile">
+		<!--
+		<junit haltonfailure="true" printsummary="true">
+			<classpath>
+				<pathelement path="${antjunit.jar}"/>
+				<pathelement path="${junit.jar}"/>
+				<pathelement path="${classes.dir}/${ant.project.name}"/>
+				<pathelement path="${classes.dir}/KnappTech"/>
+			</classpath>
+			<test name="com.kt.sr.test.junit.TestEconomicRecord"/>
+			<batchtest>
+				<fileset dir="${testsrc.dir}/junit">
+					<include name="**.java"/>
+				</fileset>
+			</batchtest>
+		</junit>-->
+		<pathconvert property="cp" pathsep=" ">
+			<path refid="classpath"/>
+			<map from="${libs.dir}/knapptech/stock" to="lib"/>
+			<map from="${libs.dir}/knapptech" to="lib"/>
+			<map from="${libs.dir}/apache" to="lib"/>
+		</pathconvert>
+        <jar destfile="${temp.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main-class}"/>
+    			<attribute name="Class-Path" value="${cp}"/>
+            </manifest>
+			<include name="**/*.class"/>
+			<include name="**/*.cfg.xml"/>
+			<include name="**/*.properties"/>
+        </jar>
+		<echo message="Finished jarring Stockradamus"/>
+	</target>
+	
+	<target name="deploy" depends="jar">
+		<delete file="../lib/knapptech/stock/${ant.project.name}.jar"/>
+		<copy file="${temp.dir}/${ant.project.name}.jar" todir="../lib/knapptech/stock"/>
+		<delete dir="${temp.dir}"/>
+	</target>
+</project>

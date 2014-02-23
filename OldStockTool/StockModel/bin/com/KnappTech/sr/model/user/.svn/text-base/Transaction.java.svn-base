@@ -1,0 +1,56 @@
+package com.kt.sr.model.user;
+
+import com.kt.model.LiteDate;
+import com.kt.model.Reportable;
+import com.kt.model.Validatable;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class Transaction implements Reportable,Validatable {
+	private static final long serialVersionUID = 201001181231L;
+	private final LiteDate date;
+	private final int quantity;
+	private final double value;
+	private final double fee;
+	
+	private Transaction(LiteDate date,int quantity,double value,double fee) {
+		this.date = date;
+		this.quantity = quantity;
+		this.value = value;
+		this.fee = fee;
+	}
+	
+	public static final Transaction create(LiteDate date,
+			int quantity,double value,double fee)
+	{
+		if (date!=null && quantity!=0) {
+			return new Transaction(date,quantity,value,fee);
+		}
+		return null;
+	}
+	
+	public LiteDate getDate() {
+		return date;
+	}
+	
+	public int getQuantity() {
+		return quantity;
+	}
+	
+	public double getValue() {
+		return value;
+	}
+
+	public double getFee() {
+		return fee;
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	@Override
+	public boolean isValid() { return true; }
+}

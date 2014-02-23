@@ -1,0 +1,82 @@
+package com.kt.util;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class ThreadManager {
+	private final int maxThreads;
+	private final List<WrappedRunner> waitingRunners = new ArrayList<WrappedRunner>();
+	private List<Thread> runningThreads = new ArrayList<Thread>();
+//	private List<Object> waitingObjectsToNotify = new ArrayList<Object>();
+	
+	public ThreadManager(int i) {
+		maxThreads = i;
+	}
+	
+	public synchronized void queue(Runnable r) throws InterruptedException {
+		WrappedRunner wr = new WrappedRunner(r);
+		waitingRunners.add(wr);
+		startNext();
+	}
+	
+	private synchronized boolean startNext() {
+		boolean b = false;
+		if (canStartAnother() && sizeWaiting()>0) {
+			WrappedRunner wr = waitingRunners.get(0);
+			waitingRunners.remove(0);
+			Thread t = new Thread(wr);
+			runningThreads.add(t);
+			t.start();
+			b = true;
+		}
+//		System.out.println("Checking if finished, there are "+sizeRunning()+" running, "
+//				+"and "+sizeWaiting()+" waiting.");
+		if (isFinished()) {
+			notifyAll();
+//			System.out.println("Did the notify all function!");
+		}
+		return b;
+	}
+	
+	private synchronized boolean canStartAnother() {
+		return (sizeRunning()<maxThreads);
+	}
+	
+	private synchronized boolean isFinished() {
+		return (sizeRunning()<1 && sizeWaiting()<1);
+	}
+	
+	public synchronized void join() throws InterruptedException {
+		while (!isFinished()) {
+			wait(3000);
+		}
+	}
+	
+	public synchronized final int sizeRunning() {
+		return runningThreads.size();
+	}
+	
+	public synchronized final int sizeWaiting() {
+		return waitingRunners.size();
+	}
+	
+	private final class WrappedRunner implements Runnable {
+		private final Runnable r;
+		
+		public WrappedRunner(Runnable r) {
+			this.r = r;
+		}
+		
+		public void run() {
+			if (waitingRunners.contains(this)) {
+				waitingRunners.remove(this);
+			}
+			if (!runningThreads.contains(Thread.currentThread())) {
+				runningThreads.add(Thread.currentThread());
+			}
+			r.run();
+			runningThreads.remove(Thread.currentThread());
+			startNext();
+		}
+	}
+}

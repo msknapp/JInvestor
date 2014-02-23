@@ -1,0 +1,71 @@
+package com.kt.sr.ctrl.opt;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+
+import com.kt.sr.model.PropertyManager;
+import com.kt.sr.model.comp.Companies;
+import com.kt.sr.model.user.Investor;
+import com.kt.sr.persistence.CompanyManager;
+import com.kt.sr.persistence.PriceHistoryManager;
+
+class OptimizationManager {
+	
+	public static void main(String[] args) {
+		System.out.println("Loading company tickers.");
+		Collection<String> companyTickers = loadPossibleTickers();
+		
+		Investor investor = Investor.MichaelKnapp();
+		Collection<String> investorCompanyTickers = investor.getCompanyTickers();
+		for (String s : investorCompanyTickers) {
+			if (!companyTickers.contains(s)) {
+				companyTickers.add(s);
+			}
+		}
+		
+		// since the order matters a lot here, I use an array list.
+		Companies companies = null;
+		try {
+			System.out.println("Loading company objects.");
+			companies = CompanyManager.getAllThatAreStored(companyTickers);
+			System.out.println("Loading price history objects.");
+			PriceHistoryManager.getAllThatAreStored(companyTickers);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		
+		System.out.println("Updating price histories if necessary.");
+		companies.passivelyUpdatePriceHistories();
+		
+		System.out.println("Starting the solver.");
+		Evolver evolver = new Evolver(companies,investor);
+		SimulatedPortfolio solution = evolver.solve();
+		solution.printDetails(investor);
+	}
+
+	private static Collection<String> loadPossibleTickers() {
+		String path = PropertyManager.getAcceptableCompaniesPath();
+		BufferedReader br = null;
+		Collection<String> tickers = new ArrayList<String>();
+		try {
+			File file = new File(path);
+			
+			if (file.exists()) {
+				br = new BufferedReader(new FileReader(file));
+				String line;
+				while ((line = br.readLine())!=null) {
+					tickers.add(line);
+				}
+			} else {
+				System.err.println("Could not find file to load tickers from.");
+			}
+		} catch (IOException e) {
+			System.err.println("IOException caught while loading possible tickers.");
+		}
+		return tickers;
+	}
+}

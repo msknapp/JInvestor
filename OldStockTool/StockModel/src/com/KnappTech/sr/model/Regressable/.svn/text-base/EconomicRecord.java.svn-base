@@ -1,0 +1,116 @@
+package com.kt.sr.model.Regressable;
+
+import java.util.Collection;
+import java.util.List;
+
+import com.kt.model.LiteDate;
+import com.kt.model.TimeFrame;
+import com.kt.model.UpdateFrequency;
+import com.kt.sr.ctrl.parse.BLSParser;
+import com.kt.sr.ctrl.parse.FRBParser;
+import com.kt.sr.ctrl.parse.SLFParser;
+import com.kt.sr.model.constants.SourceAgency;
+
+public class EconomicRecord extends RecordList<Record> {
+	private static final long serialVersionUID = 201010092210L;
+
+	private EconomicRecord(String id, SourceAgency sourceAgency) {
+		super(id,sourceAgency);
+	}
+	
+	private EconomicRecord(String id, SourceAgency sourceAgency,Collection<Record> c) {
+		super(id,sourceAgency,c);
+	}
+	
+	private EconomicRecord(EconomicRecord original) {
+		super(original);
+	}
+
+	public static final EconomicRecord createInstance(String id, SourceAgency sourceAgency) {
+		if (id!=null && id.length()>0 && sourceAgency!=null) {
+			return new EconomicRecord(id,sourceAgency);
+		}
+		return null;
+	}
+
+	public static final EconomicRecord createInstance(String id, SourceAgency sourceAgency,Collection<Record> c) {
+		if (id!=null && id.length()>0 && sourceAgency!=null) {
+			return new EconomicRecord(id,sourceAgency,c);
+		}
+		return null;
+	}
+	
+	public EconomicRecord clone() {
+		return new EconomicRecord(this);
+	}
+	
+	@Override
+	public boolean canBeNegative() {
+		return true;
+	}
+
+	@Override
+	public Record createRecord(LiteDate date, double value) {
+		return Record.create(date,value);
+	}
+
+	public boolean equals(Object o) {
+		if (o instanceof EconomicRecord) {
+			EconomicRecord r = (EconomicRecord)o;
+			String s = r.getID();
+			if (s!=null) {
+				return (s.equals(getID()));
+			} else {
+				return getID()==null;
+			}
+		}
+		return false;
+	}
+	
+	public int hashCode() {
+		int i = getID().hashCode()+8;
+		return i;
+	}
+	
+	@Override
+	public void update() throws InterruptedException {
+		if (sourceAgency.equals(SourceAgency.BLS)) {
+			BLSParser blsp = new BLSParser();
+			blsp.update(this);
+		} else if (sourceAgency.equals(SourceAgency.FRB)) {
+			FRBParser blsp = new FRBParser();
+			blsp.update(this);
+		} else if (sourceAgency.equals(SourceAgency.SLF)) {
+			SLFParser blsp = new SLFParser();
+			blsp.update(this);
+		} else {
+			System.err.println("Asked to update an economic record, but the " +
+					"source agency is not paired with an updater/parser.");
+		}
+	}
+
+	@Override
+	public int compareTo(String o) {
+		return id.compareTo(o);
+	}
+
+	@Override
+	public List<Double> asFrequency(UpdateFrequency updateFrequency) {
+		return null;
+	}
+
+	@Override
+	public void getRegressableList(LiteDate startDate, LiteDate endDate,
+			UpdateFrequency updateFrequency, int offset) {
+	}
+
+	@Override
+	public boolean isMultiple() {
+		return false;
+	}
+
+	@Override
+	public TimeFrame getTimeFrame() {
+		return new TimeFrame(getStartDate(),getEndDate());
+	}
+}

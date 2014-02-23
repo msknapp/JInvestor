@@ -1,0 +1,43 @@
+package com.kt.sr.model;
+
+import com.kt.model.ReportableSet;
+import com.kt.sr.model.Regressable.RecordSet;
+import com.kt.view.report.Report;
+import com.kt.view.report.ReportCell;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class Commodities extends RecordSet<Commodity> implements ReportableSet {
+	private static final long serialVersionUID = 201001181307L;
+
+	@Override
+	public int compareTo(String o) {
+		return 0;
+	}
+
+	@Override
+	public Report getReport(ReportSettings settings) {
+		Report report = new Report(settings);
+		for (Commodity comm : items) {
+			report.add(comm.getReportRow(settings));
+		}
+		return report;
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		ReportRow row = new ReportRow();
+		row.add(new ReportCell("size",String.valueOf(items.size())));
+		return row;
+	}
+
+	@Override
+	public Commodities createInstance() {
+		return new Commodities();
+	}
+
+	@Override
+	public boolean save(boolean multiThread) throws InterruptedException {
+		return false;
+	}
+}

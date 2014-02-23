@@ -1,0 +1,1084 @@
+package com.KnappTech.util;
+// package com.knappTech.util;
+//
+//import java.io.File;
+//import java.io.IOException;
+//import java.io.InputStream;
+//import java.io.OutputStream;
+//import java.lang.reflect.InvocationTargetException;
+//import java.lang.reflect.TypeVariable;
+//import java.util.ArrayList;
+//import java.util.Collection;
+//import java.util.HashSet;
+//import java.util.LinkedHashSet;
+//import java.util.Set;
+//
+//import com.knappTech.beans.CustomPersistable;
+//import com.knappTech.beans.KTObject;
+//import com.knappTech.beans.KTSet;
+//import com.knappTech.stockradamus.beans.SRCommodity;
+//import com.knappTech.stockradamus.beans.SRCommoditySet;
+//import com.knappTech.stockradamus.beans.SRCompany;
+//import com.knappTech.stockradamus.beans.SRCompanySet;
+//import com.knappTech.stockradamus.beans.SRIndustrySet;
+//import com.knappTech.stockradamus.beans.SRRegressionResults;
+//import com.knappTech.stockradamus.beans.SRRegressionResultsSet;
+//import com.knappTech.stockradamus.beans.SRSectorSet;
+//import com.knappTech.stockradamus.beans.Financial.SRFinancialHistory;
+//import com.knappTech.stockradamus.beans.Financial.SRFinancialHistorySet;
+//import com.knappTech.stockradamus.beans.Regressable.SREconomicRecord;
+//import com.knappTech.stockradamus.beans.Regressable.SREconomicRecordSet;
+//import com.knappTech.stockradamus.beans.Regressable.SRPriceHistory;
+//import com.knappTech.stockradamus.beans.Regressable.SRPriceHistorySet;
+//import com.knappTech.stockradamus.beans.user.SRInvestor;
+//import com.knappTech.stockradamus.beans.user.SRInvestorSet;
+//
+//public class DataManager {
+//	private static final int MARKLIMIT = 50000; //26200;
+//	private static final boolean DEBUGMODE = false;
+//	
+//	/**
+//	 * We need to find the existing company data in the contents,
+//	 * then replace it with the new data, and save the string.
+//	 * @param companies
+//	 */
+//	public static void saveItems(KTSet<? extends KTObject> items) {
+//		CodeStalker.startMethod("saveItems");
+//		if (items.size()>0) {
+//			KTObject item = (KTObject) items.iterator().next();
+//			String elementTag = item.getTag();
+//			String idTag = item.getIDTag();
+//			KTReader reader = StreamManager.getReader(item);
+//			KTWriter writer = StreamManager.getTempWriter(item);
+//			if (elementTag!=null && elementTag.length()>0 && idTag!=null && idTag.length()>0) {
+//				int i=0;
+//				StringBuilder sb = new StringBuilder();
+//				char streamLetter;
+//				String id = null;
+//				String endElement = "</"+elementTag+">";
+//				String endId = "</"+idTag+">";
+//				reader.mark(MARKLIMIT);
+//				
+//				LinkedHashSet<String> ids = items.getIdSet();
+//				LinkedHashSet<String> presentIds = new LinkedHashSet<String>();
+//				
+//				String possibleEndElement= "";
+//				int idTagStartIndex = 0;
+//				int idTagEndIndex = 0;
+//				CustomPersistable saveObject = null;
+//				try {
+//					while ((i=reader.read())>-1) {
+//						streamLetter = (char)i;
+//						sb.append(streamLetter);
+//						if (sb.length()>5){
+//							possibleEndElement = sb.substring(sb.length()-endElement.length());
+//							if (streamLetter=='*' && sb.charAt(sb.length()-2)=='>'){
+//								// Since there are some times we read data types as characters, but
+//								// they were not meant to be read as characters (i.e. reading trend
+//								// date objects that were deflated), it is possible for a * to appear
+//								// that is illegitimate.  So we check for > preceeding it, but it's 
+//								// still possible for that combination to be illegitimate...
+//								reader.skipNumbers();
+//							} else if (sb.substring(sb.length()-endId.length()).equals(endId)) {
+//								// You reached the end of the id tag, now record the id.
+//								idTagStartIndex = sb.substring(0, sb.length()-1).lastIndexOf(">")+1;
+//								idTagEndIndex = sb.indexOf("<", idTagStartIndex);
+//								id = sb.substring(idTagStartIndex, idTagEndIndex);
+//							}
+//							if (possibleEndElement.equals(endElement)) {
+//								if (id != null) {
+//									saveObject = items.get(id);
+//									if (saveObject!=null) {
+//										// Write the replacement
+//	//									System.out.println("SaveSet: Strategy="+strategy+", Replacing Company that was already recorded: "+id);
+//										if (saveObject.validated()) {
+//											writer.write("<"+elementTag+">");
+////											saveObject.deflate(writer);
+//											writer.write("</"+elementTag+">");
+//										} else {
+//											System.err.println("Warning: an item is not being saved because it failed validation.");
+//										}
+//										writer.flush();
+//									} else {
+//										// Write the original.
+//	//									System.out.println("SaveSet: Strategy="+strategy+", Copying Company that was already recorded: "+id);
+//										
+//										// I cheat the stupid reader code:
+//	//									int desiredReach = (int) Math.round(MARKLIMIT*0.55);
+//	//									int gap = desiredReach - (numSkipped+200);
+//	//									if (gap>0) {
+//	//										reader.skip(gap);
+//	//									}
+//										
+//										reader.reset();
+//										writer.writeNextElement(reader, elementTag);
+//										presentIds.add(id);
+//									}
+//									sb = new StringBuilder();
+//									reader.mark(MARKLIMIT);
+//								}
+//							}
+//						}
+//					}
+//					
+//					if (presentIds.isEmpty()) {
+//						System.out.println("FYI: while saving a set, nothing to save was already stored.");
+//					}
+//					
+//					ids.removeAll(presentIds);
+//					if (ids.isEmpty()) {
+//						System.out.println("FYI: while saving a set, everything to save was already stored.");
+//					} else {
+//						KTSet<? extends CustomPersistable> cs = items.getSubSet(ids);
+//						for (CustomPersistable cp : cs) {
+//							if (cp.validated()) {
+//								writer.write("<"+elementTag+">");
+////								cp.deflate(writer);
+//								writer.write("</"+elementTag+">");
+//							} else {
+//								System.err.println("Warning: an item is not being saved because it failed validation.");
+//							}
+//							writer.flush();
+//						}
+//					}
+//					close(reader);
+//					close(writer);
+//					
+//					File replacement = new File(PropertyManager.getTempVersion(item));
+//					File original = new File(PropertyManager.getPath(item));
+//					if (original.exists()){
+//						original.delete();
+//					} else {
+//						System.out.println("FYI: while saving a set, the original file did not exist when it came time to replace it.");
+//					}
+//					replacement.renameTo(original);
+//				} catch (IOException e) {
+//					defaultExceptionHandler(e);
+//				}
+//			}else {
+//				System.err.format("Warning: could not save a set because of bad inputs.%n" +
+//						"   set id=%s, elementTag = %s, idtag=%s%n",items.getID(),elementTag,idTag);
+//			}
+//		} else {
+//			System.err.println("Given a null set to save.");
+//		}
+//		CodeStalker.finishMethod("saveItems");
+//	}
+//	
+//	/**
+//	 * Loads items.
+//	 * @param items
+//	 * @param subElementTag
+//	 * @param subElementIDTag
+//	 * @return
+//	 */
+//	public static KTSet<? extends KTObject> loadItems(KTSet<? extends KTObject> items) {
+//		CodeStalker.startMethod("loadItems");
+//		if (items!=null && !items.isEmpty())  {
+//			KTObject item = items.iterator().next();
+//			String subElementTag = item.getTag();
+//			String subElementIDTag = item.getIDTag();
+//			if (subElementTag!=null && subElementTag.length()>0 && 
+//				subElementIDTag!=null && subElementIDTag.length()>0) 
+//			{
+//				KTReader reader = StreamManager.getReader(items);
+//				if (reader!=null) {
+//					boolean hasThoseElements = false;
+//					boolean hasThatIDTag = false;
+//					HashSet<String> missingIDs = new HashSet<String>(items.getIdSet());
+//					String identity = null;
+//					
+//					try {
+//						while (reader.hasElement(subElementTag,true)) {
+//							identity = null;
+//							hasThoseElements = true;
+//							
+//							if (Thread.interrupted()) throw new InterruptedException();
+//							reader.advanceToElement(subElementTag,true);
+//							
+//							if (Thread.interrupted()) throw new InterruptedException();
+//							identity = reader.getAttributeValue(subElementIDTag,subElementTag);
+//							
+//							if (Thread.interrupted()) throw new InterruptedException();
+//							if (identity!=null) {
+//								hasThatIDTag = true;
+//								if (items.getIdSet().contains(identity)){
+//									item = items.get(identity);
+////									item.inflate(reader);
+//									
+//									if (!item.validated()) {
+//										System.err.println("Warning: loaded an item that failed validation immediately after loading.");
+//									}
+//									
+//									if (Thread.interrupted()) throw new InterruptedException();
+//									missingIDs.remove(identity);
+//								} else if (DEBUGMODE) {
+//									System.out.println("      While searching for "+items.getClass()+" items, Found unrequested id: "+identity);
+//								}
+//							}
+//						}
+//						try {
+//							reader.close();
+//						} catch (IOException e) {
+//							defaultExceptionHandler(e);
+//						}
+//						if (!hasThoseElements) {
+//							System.err.println("Warning: requested items by element tag: "+subElementTag+", but those could not be found in the file.");
+//						} else if (!hasThatIDTag) {
+//							System.err.println("Warning: requested items by element id tag: "+subElementIDTag+", but that id tag was not found in the file.");
+//						} else if (!missingIDs.isEmpty()) {
+//							if (DEBUGMODE) {
+//								System.err.format("Warning: requested to load items by ids, but some items were not found in the file. " +
+//										"  element tag: %s, id tag: %s, Items Missing: %n",subElementTag,subElementIDTag);
+//								String str = "";
+//								for (String missingID : missingIDs) {
+//									if (str.length()>0) str += ", ";
+//									str += missingID;
+//								}
+//								System.out.println(str);
+//								int a = items.size();
+//								int b = missingIDs.size();
+//								double p = ((double)b)/((double)a)*100;
+//								System.out.format("Items requested: %d, missing: %d, Percent missing: %f.%n",a,b,p);
+//								System.out.println("While searching for items, Found while loading set of type "+items.getClass());
+//							}
+//						}
+//					} catch (InterruptedException e) {
+//						System.err.println("Interrupted while trying to load for set "+items.getClass().getName()+" the following: ");
+//						String str = items.getIdSet().toString();
+//						System.err.println(str);
+//						// just force this to move on, it is taking too long.
+//					}
+//				} else {
+//					System.err.println("Warning: could not create reader for loading items.");
+//				}
+//			} else {
+//				
+//			}
+//		} else {
+//			System.err.println("Warning: invalid inputs for loading items.");
+//		}
+//		CodeStalker.finishMethod("loadItems");
+//		return items;
+//	}
+//
+//	public static KTObject loadItem(KTObject item) {
+//		if (item!=null && item.getID()!=null && !item.getID().equals("")) {
+//			KTSet<? extends KTObject> items = getSetVersion(item);
+//			loadItems(items);
+//			return items.iterator().next();
+//		} else {
+//			System.err.format("Warning: an item was null, or an id invalid when trying to load an object.%s.%n");
+//		}
+//		return null;
+//	}
+//	
+//	public static KTSet<? extends KTObject> loadItemsByLetter(KTSet<? extends KTObject> items) {
+//		KTObject sample = items.iterator().next();
+//		if (sample!=null) {
+//			if (sample.loadByLetter()) {
+//				int startLetter = 65;
+//				int endLetter = 91;
+//				KTSet<? extends KTObject> subItems = items.createKTSetInstance();
+//				char c = 'a';
+//				for (int letter = startLetter;letter<endLetter;letter++) {
+//					c = (char)letter;
+//					for (KTObject obj : items) {
+//						if (obj.getID().charAt(0)==c) {
+//							subItems.add(obj);
+//						}
+//					}
+//				}
+//				if (!subItems.isEmpty()) {
+//					loadItems(subItems);
+//				}
+//			} else {
+//				System.err.println("Warning: given a set to load by letter that doesn't need to be.");
+//			}
+//		} else {
+//			System.err.println("Warning: given an empty set to load.");
+//		}
+//		return items;
+//	}
+//	
+//	// LOAD ALL FUNCTIONS:
+//	
+//	public static SRCompanySet loadAllCompanies() {
+//		SRCompanySet companies = new SRCompanySet();
+//		LinkedHashSet<String> ids = getAllIDs(new SRCompany());
+//		for (String id : ids) {
+//			SRCompany company = new SRCompany();
+//			company.setID(id);
+//			companies.add(company);
+//		}
+//		loadItems(companies);
+//		return companies;
+//	}
+//
+//	public static SRPriceHistorySet loadAllPriceHistories() {
+//		SRPriceHistorySet histories = new SRPriceHistorySet();
+//		LinkedHashSet<String> ids = getAllIDs(new SRPriceHistory());
+//		for (String id : ids) {
+//			SRPriceHistory history = new SRPriceHistory();
+//			history.setID(id);
+//			histories.add(history);
+//		}
+//		loadItems(histories);
+//		return histories;
+//	}
+//
+//	public static SREconomicRecordSet loadAllEconomicRecords() {
+//		SREconomicRecordSet records = new SREconomicRecordSet();
+//		LinkedHashSet<String> ids = getAllIDs(new SREconomicRecord());
+//		for (String id : ids) {
+//			SREconomicRecord record = new SREconomicRecord();
+//			record.setID(id);
+//			records.add(record);
+//		}
+//		loadItems(records);
+//		return records;
+//	}
+//
+//	public static SRSectorSet loadAllSectors() {
+//		SRSectorSet sectors = new SRSectorSet();
+////		sectors.addAll(getAllIDs(new SRSectorSet(), "s"));
+//		return sectors;
+//	}
+//	
+//	public static void saveSectors(SRSectorSet sectors) {
+//		try {
+//			KTWriter writer = StreamManager.getSectorWriter();
+////			sectors.deflate(writer);
+//			writer.close();
+//		} catch (IOException e) {
+//			System.err.println("Warning: failed to save sectors.");
+//			e.printStackTrace();
+//		}
+//	}
+//	
+//	public static void saveIndustries(SRIndustrySet industries) {
+//		try {
+//			KTWriter writer = StreamManager.getIndustryWriter();
+////			industries.deflate(writer);
+//			writer.close();
+//		} catch (IOException e) {
+//			System.err.println("Warning: failed to save industries.");
+//			e.printStackTrace();
+//		}
+//	}
+//
+//	public static SRIndustrySet loadAllIndustries() {
+//		SRIndustrySet industries = new SRIndustrySet();
+////		industries.addAll(getAllIDs(new SRIndustrySet(), "i"));
+//		return industries;
+//	}
+//	
+//	public static LinkedHashSet<String> getAllIDs(KTObject item,String tag) {
+//		CodeStalker.startMethod("getAllIDs");
+//		LinkedHashSet<String> ids = new LinkedHashSet<String>();
+//		KTReader reader = StreamManager.getReader(item);
+//		if (reader!=null) {
+//			boolean hasTag = false;
+//			
+//			while (reader.hasElement(tag,true)){
+//				hasTag = true;
+//				reader.advanceToElement(tag,true);
+//				String id = reader.getAttributeValue(tag,true);
+//				ids.add(id);
+//			}
+//			
+//			if (!hasTag) {
+//				System.err.println("While trying to get all ids, the tag was never found: "+tag);
+//			}
+//		} else {
+//			System.err.println("While trying to get all ids, the reader was null.");
+//		}
+//		if (ids.isEmpty()) {
+//			System.err.println("Warning: returned an empty list of ids. tag="+tag);
+//		}
+//		CodeStalker.finishMethod("getAllIDs");
+//		return ids;
+//	}
+//	
+//	public static void saveAllPriceHistories(SRPriceHistorySet allPriceHistories) {
+//		saveItems(allPriceHistories);
+//	}
+//
+//	public static SRCompanySet loadCompanies(Collection<String> tickers) {
+//		SRCompany company = null;
+//		SRCompanySet companies = new SRCompanySet();
+//		for (String ticker : tickers) {
+//			company = new SRCompany();
+//			company.setID(ticker);
+//			companies.add(company);
+//		}
+//		loadItems(companies);
+//		return companies;
+//	}
+//
+// 	public static SRPriceHistorySet loadPriceHistories(Collection<String> tickers) {
+//		SRPriceHistorySet allPriceHistories = new SRPriceHistorySet();
+// 		for (int i = 65;i<=90;i++) {
+//	 		char letter = (char)i;
+//	 		LinkedHashSet<String> tickersOfLetter = DataUtility.getLetterSubset(tickers, letter);
+//	 		if (tickersOfLetter.size()>0) {
+//		 		SRPriceHistorySet histories = new SRPriceHistorySet();
+//		 		for (String id : tickersOfLetter) {
+//		 			SRPriceHistory history = new SRPriceHistory();
+//		 			history.setID(id);
+//		 			histories.add(history);
+//		 		}
+//		 		loadItems(histories);
+//		 		allPriceHistories.addAll(histories);
+//	 		}
+// 		}
+// 		if (allPriceHistories.size()!=tickers.size()) {
+// 			System.err.println("Warning: some price histories requested are not present.");
+// 		}
+//		return allPriceHistories;
+//	}
+// 	
+// 	public static SREconomicRecordSet loadEconomicRecords(Collection<String> ids) {
+// 		SREconomicRecord record = null;
+//		SREconomicRecordSet records = new SREconomicRecordSet();
+//		for (String id : ids) {
+//			record = new SREconomicRecord();
+//			record.setID(id);
+//			records.add(record);
+//		}
+//		loadItems(records);
+//		return records;
+// 	}
+//
+//	public static LinkedHashSet<String> loadCompanyTickers() {
+//		return getAllIDs(new SRCompany());
+//	}
+//	
+//	public static LinkedHashSet<String> getAllIDs(KTObject item) {
+//		CodeStalker.startMethod("getAllIDs-byObject");
+//		LinkedHashSet<String> ids = new LinkedHashSet<String>();
+//		
+//		int startLetter = 65;
+//		int endLetter = 66;
+//		if (item.loadByLetter()) {
+//			endLetter = 91;
+//		}
+//		
+//		for (int letter = startLetter;letter<endLetter;letter++) {
+//			if (item.loadByLetter()) {
+//				String c = String.valueOf((char)letter);
+//				item.setID(c);
+//			}
+//			KTReader reader = StreamManager.getReader(item);
+//			if (reader!=null) {
+//				boolean hasTag = false;
+//				while (reader.hasElement(item.getTag(),true)){
+//					hasTag = true;
+//					reader.advanceToElement(item.getTag(),true);
+//					String id = reader.getAttributeValue(item.getIDTag(),item.getTag());
+//					if (id!=null) {
+//						ids.add(id);
+//					}
+//				}
+//				
+//				if (!hasTag && !item.loadByLetter()) {
+//					System.err.println("Warning: the tag "+item.getIDTag()+" was not found while trying to get all ids.");
+//				}
+//			} else {
+//				System.err.println("Warning: the reader came back null when trying to get all ids.");
+//			}
+//		}
+//		if (ids.isEmpty()) {
+//			System.err.println("Warning: returned an empty list of ids.");
+//		}
+//		
+//		if (PropertyManager.BUGFINDMODE) {
+//			// Check for duplicates:
+//			String id = "";
+//			ArrayList<String> duplicates = new ArrayList<String>();
+//			ArrayList<String> idList = new ArrayList<String>(ids);
+//			for (int i = 0;i<idList.size();i++) {
+//				for (int j = i+1;j<idList.size();j++) {
+//					id = idList.get(i);
+//					if (id!=null && id.equals(idList.get(j))) {
+//						duplicates.add(idList.get(i));
+//					}
+//				}
+//			}
+//			if (!duplicates.isEmpty()) {
+//				System.err.println("Warning: found the following duplicate ids: ");
+//				System.err.println(duplicates.toString());
+//			}
+//		}
+//
+//		CodeStalker.finishMethod("getAllIDs-byObject");
+//		return ids;
+//	}
+//	
+//	// LOAD A SINGLE OBJECT:
+//
+//	public static SRCompany loadCompany(String ticker) {
+//		SRCompany company = new SRCompany();
+//		company.setID(ticker);
+//		loadItem(company);
+//		return company;
+//	}
+//
+//	public static SREconomicRecord loadEconomicRecord(String id) {
+//		SREconomicRecord record = new SREconomicRecord();
+//		record.setID(id);
+//		loadItem(record);
+//		return record;
+//	}
+//
+//	public static SRPriceHistory loadPriceHistory(String tickerSymbol) {
+//		SRPriceHistory history = new SRPriceHistory();
+//		history.setID(tickerSymbol);
+//		loadItem(history);
+//		return history;
+//	}
+//	
+//	public static void saveCompanies(SRCompanySet companies) {
+//		saveItems(companies);
+//	}
+//	
+// 	public static void savePriceHistories(SRPriceHistorySet priceHistories) {
+// 		saveItems(priceHistories);
+// 	}
+//
+// 	public static void saveEconomicRecords(SREconomicRecordSet records) {
+// 		saveItems(records);
+// 	}
+// 	
+// 	// LOAD A SINGLE OBJECT BY INDEX:
+//
+//	public static SREconomicRecord loadEconomicRecord(int index) {
+//		CodeStalker.startMethod("loadEconomicRecord-index");
+//		if (index>=0) {
+//			KTReader reader = StreamManager.getReader(new SREconomicRecordSet());
+//			SREconomicRecord record = null;
+//			int i = 0;
+//			while (i<=index){
+//				reader.advanceToElement(SREconomicRecord.TAG);
+//				i++;
+//			}
+//			record = new SREconomicRecord();
+//			record.inflate(reader);
+//			close(reader);
+//			CodeStalker.finishMethod("loadEconomicRecord-index");
+//			return record;
+//		} else {
+//			System.err.println("Warning: given a negative index to find an economic record for.");
+//		}
+//		CodeStalker.finishMethod("loadEconomicRecord-index");
+//		return null;
+//	}
+//	
+//	public static int getEconomicRecordCount() {
+//		LinkedHashSet<String> ids = getAllIDs(new SREconomicRecord());
+//		return ids.size();
+////		
+////		KTReader reader = StreamManager.getReader(new SREconomicRecordSet());
+////		int count = 0;
+////		while (reader.hasElement(SREconomicRecord.TAG)){
+////			reader.advanceToElement(SREconomicRecord.TAG);
+////			count++;
+////		}
+////		return count;
+//	}
+//	
+//	// SAVE A SINGLE OBJECT:
+//
+//	public static void saveCompany(SRCompany company) {
+//		saveItem(company);
+//	}
+//	
+//	public static void saveItem(KTObject item) {
+//		KTSet<? extends KTObject> items = getSetVersion(item);
+//		saveItems(items);
+//	}
+//	
+//	// HELPER FUNCTIONS:
+//	
+//	private static KTSet<? extends KTObject> getSetVersion(KTObject item) {
+//		KTSet<? extends KTObject> items = null;
+//		if (item instanceof SRCompany) {
+//			items = new SRCompanySet();
+//		} else if (item instanceof SRPriceHistory) {
+//			items = new SRPriceHistorySet();
+//		} else if (item instanceof SREconomicRecord) {
+//			items = new SREconomicRecordSet();
+//		} else if (item instanceof SRRegressionResults) {
+//			items = new SRRegressionResultsSet();
+//		} else if (item instanceof SRCommodity) {
+//			items = new SRCommoditySet();
+//		} else if (item instanceof SRFinancialHistory) {
+//			items = new SRFinancialHistorySet();
+//		} else if (item instanceof SRInvestor) {
+//			items = new SRInvestorSet();
+//		}
+//		items.add(item);
+//		return items;
+//	}
+//	
+//	private static void close(OutputStream writer) {
+//		try {
+//			writer.close();
+//		} catch (IOException e) {
+//			defaultExceptionHandler(e);
+//		}
+//	}
+//	
+//	private static void close(InputStream reader) {
+//		try {
+//			reader.close();
+//		} catch (IOException e) {
+//			defaultExceptionHandler(e);
+//		}
+//	}
+//	
+//	private static void defaultExceptionHandler(Exception e) {
+//		System.err.format("An exception was thrown by thread %s, in class %s, method %s%n" +
+//				"   type: %s, message: %s%n" +
+//				"   ", Thread.currentThread().getName(),"DataManager",
+//				Thread.currentThread().getStackTrace()[2].getMethodName(),
+//				e.getClass(),e.getMessage());
+//	}
+//	
+//	public static Object getClassInstance(Class<?> myclass) {
+//		Object obj = null;
+//		try {
+//			obj = myclass.getConstructor().newInstance();
+//		} catch (IllegalArgumentException e) {
+//			defaultExceptionHandler(e);
+//		} catch (SecurityException e) {
+//			defaultExceptionHandler(e);
+//		} catch (InstantiationException e) {
+//			defaultExceptionHandler(e);
+//		} catch (IllegalAccessException e) {
+//			defaultExceptionHandler(e);
+//		} catch (InvocationTargetException e) {
+//			defaultExceptionHandler(e);
+//		} catch (NoSuchMethodException e) {
+//			defaultExceptionHandler(e);
+//		}
+//		System.err.println("Warning: unable to create a class instance for class "+myclass.getName());
+//		return obj;
+//	}
+//	
+//	public static KTObject getKTClassInstance(Class<? extends KTObject> myclass) {
+//		KTObject obj = null;
+//		try {
+//			Class<?> mycl = (Class<?>)(myclass);
+//			obj = (KTObject) getClassInstance(mycl);
+//		} catch (Exception e) {
+//			defaultExceptionHandler(e);
+//		}
+//		return obj;
+//	}
+//
+//	@Deprecated
+//	public static boolean loadByLetter(Class<? extends KTObject> myclass) {
+//		try {
+//			KTObject obj = getKTClassInstance(myclass);
+//			if (obj==null) {
+//				return (obj instanceof SRPriceHistory || obj instanceof SRPriceHistorySet);
+//			}
+//			return (obj.loadByLetter());
+//		} catch (Exception e) {
+//			defaultExceptionHandler(e);
+//		}
+//		return false;
+//	}
+//
+//	@Deprecated
+//	public static KTSet<? extends Object> loadAll(Class<? extends KTSet<? extends Object>> myclass) {
+//		KTSet<? extends Object> objects = null;
+//		int startIndex = 42;
+//		int endIndex = 42;
+//		if (myclass.equals(SRPriceHistorySet.class)){
+//			startIndex = 65;
+//			endIndex = 90;
+//		}
+//		try {
+//			objects = (KTSet<? extends Object>)myclass.getConstructor().newInstance();
+//			for (int i = startIndex;i<=endIndex;i++) {
+//				char letter = (char)i;
+//				KTReader reader = StreamManager.getReader(myclass,letter);
+//				try {
+////					objects.inflate(reader);
+//				} catch (Exception e) {
+//					defaultExceptionHandler(e);
+//				}
+//				close(reader);
+//			}
+//		} catch (Exception e) {
+//			defaultExceptionHandler(e);
+//		}
+//		return objects;
+//	}
+//	
+//	@Deprecated
+//	public static KTSet<? extends CustomPersistable> 
+//		loadSet(Set<String> ids, Class<? extends 
+//		KTSet<? extends CustomPersistable>> setClass, String elementTag, String idTag, char letter)
+//	{
+//		KTSet<? extends CustomPersistable> objects = null;
+//		KTReader reader = StreamManager.getReader(setClass, letter);
+//		try {
+//			objects = setClass.getConstructor().newInstance();
+//			while (reader.hasElement(elementTag)){
+//				reader.advanceToElement(elementTag);
+//				String id = reader.getAttributeValue(idTag);
+//				if (ids.contains(id)) {
+//					TypeVariable<? extends Class<? extends CustomPersistable>> typeVar = setClass.getTypeParameters()[0];
+//					Class<? extends CustomPersistable> type = typeVar.getGenericDeclaration();
+//					CustomPersistable object = type.getConstructor().newInstance();
+////					object.inflate(reader);
+//					objects.add(object);
+//				}
+//			}
+//			close(reader);
+//		} catch (Exception e) {
+//			defaultExceptionHandler(e);
+//		}
+//		return objects;
+//	}
+//	
+//	@Deprecated
+//	public static KTSet<? extends CustomPersistable> 
+//	loadSet(Set<String> ids, Class<? extends 
+//	KTSet<? extends CustomPersistable>> setClass, String elementTag, String idTag)
+//	{
+//		return loadSet(ids,setClass,elementTag,"*");
+//	}
+//	
+//	@Deprecated
+//	public static KTObject loadItem(Class<? extends KTObject> typeClass, int index,
+//			KTObject item,String subElementTag) {
+//		if (typeClass!=null && 0<=index && item!=null && subElementTag!=null && !subElementTag.isEmpty()) {
+//			KTReader reader = StreamManager.getReader(SREconomicRecordSet.class);
+//			if (reader!=null) {
+//				int i = 0;
+//				while (i<=index){
+//					reader.advanceToElement(subElementTag,true);
+//					i++;
+//				}
+////				item.inflate(reader);
+//				close(reader);
+//			} else {
+//				System.err.println("Warning: could not produce a reader for loading an item.");
+//			}
+//		} else {
+//			System.err.println("Warning: invalid inputs to load an item.");
+//		}
+//		return item;
+//	}
+//	
+//	@Deprecated
+//	public static void saveAll(KTSet<?> objects) {
+//		KTWriter writer = StreamManager.getWriter(objects.getClass());
+////		objects.deflate(writer);
+//		close(writer);
+//	}
+//}
+//
+//
+////SRPriceHistorySet allPriceHistories = new SRPriceHistorySet();
+////for (int i=65;i<=90;i++) {
+////	try {
+////		char letter = (char)i;
+////		KTReader reader = StreamManager.getReader(SRPriceHistorySet.class,letter);
+////		allPriceHistories.inflate(reader);
+////		close(reader);
+////	} catch (Exception e) {
+////		String msg = "Exception caught while trying to load all price Histories.";
+////		System.err.println(msg);
+////	}
+////}
+////return allPriceHistories;
+//
+////SRCompanySet allCompanies = new SRCompanySet();
+////KTReader reader = StreamManager.getReader(SRCompanySet.class);
+////while (reader.hasElement("CS")){
+////	reader.advanceToElement("CS");
+////	String ticker = reader.getAttributeValue("TS");
+////	if (tickers.contains(ticker)){
+////		SRCompany company = new SRCompany();
+////		company.inflate(reader);
+////		allCompanies.add(company);
+////	}
+////}
+////close(reader);
+//	
+////	KTReader reader = StreamManager.getReader(SRPriceHistorySet.class,letter);
+////	while (reader.hasElement("PS")){
+////		reader.advanceToElement("PS");
+////		String ticker = reader.getAttributeValue("id");
+////		if (tickersOfLetter.contains(ticker)){
+////		SRPriceHistory priceHistory = new SRPriceHistory();
+////		priceHistory.inflate(reader);
+////		allPriceHistories.add(priceHistory);
+////		}
+////	}
+////}
+//	
+////	KTReader reader = StreamManager.getReader(SREconomicRecordSet.class);
+////for (SREconomicRecord record : records) {
+////	String indicator = record.getId();
+////	String deflated = record.deflate();
+////	int index = recordContents.indexOf("<id>"+indicator+"</id>");
+////	if (index>-1){
+////		String s = recordContents.substring(0, index);
+////		int startIndex = s.lastIndexOf("<ER>")+4;
+////		int endIndex = getEndIndex(recordContents,"ER",startIndex);
+////		String preText = recordContents.substring(0, startIndex);
+////		String postText = recordContents.substring(endIndex, recordContents.length());
+////		String newText = preText + deflated + postText;
+////		recordContents = newText;
+////	} else {
+////		recordContents+="<ER>"+deflated+"</ER>";
+////	}
+////}
+//
+////public static void saveSectors(SRSectorSet sectors) {
+////	KTReader reader = StreamManager.getReader(SRSectorSet.class);
+////	for (String sector : sectors) {
+////		String searchString = "<s>"+sector+"</s>";
+////		int index = sectorContents.indexOf(searchString);
+////		if (index<=-1){
+////			sectorContents+=searchString;
+////		}
+////	}
+////}
+////
+////public static void saveIndustries(SRIndustrySet industries) {
+////	StringBuilder industryContents = StreamManager.getIndustryReader();
+////	for (String industry : industries) {
+////		String searchString = "<i>"+industry+"</i>";
+////		int index = industryContents.indexOf(searchString);
+////		if (index<=-1){
+////			industryContents+=searchString;
+////		}
+////	}
+////}
+//
+///*
+//public static StringBuilder getContents(String fullPath) {
+//	File file = new File(fullPath); 
+//	StringBuilder contents = new StringBuilder();
+//	if (file.exists()) {
+//		FileReader fr = null;
+//		BufferedReader br = null;
+//		try {
+//			fr = new FileReader(file);
+//			br = new BufferedReader(fr);
+//			String s = null;
+//			while ((s=br.readLine())!=null) {
+//				contents.append(s);
+//			}
+//		} catch (Exception e) {
+//			
+//		} finally {
+//			if (fr != null) {
+//				try {fr.close();} catch (Exception e) {}
+//			}
+//			if (br != null) {
+//				try {br.close();} catch (Exception e) {}
+//			}
+//		}
+//	}
+//	return contents;
+//}
+//*/
+//
+///*
+//public static void writeContents(String fullPath, String contents) {
+//    FileWriter fw = null;
+//    BufferedWriter bw = null;
+//    File file = new File(fullPath);
+//    if (file.exists()){
+//    	file.delete();
+//    }
+//    try {
+//    	file.createNewFile();
+//    	fw = new FileWriter(file);
+//    	bw = new BufferedWriter(fw);
+//    	bw.write(contents);
+//    	bw.close();
+//    } catch (IOException e) {
+//    	String msg = "Problem while saving your contents";
+//    	System.err.println(msg);
+//    } finally {
+//    	try {
+//            if (fw != null) {
+//            	fw.close();
+//            }
+//            if (bw!=null){
+//                bw.close();
+//            }
+//    	} catch (Exception e) {}
+//    }
+//}
+//*/
+//	
+////	StringBuilder priceHistoryContents = StreamManager.getPriceHistoryReader(letter);
+////for (SRPriceHistory priceHistory : letterSet) {
+////	String ticker = priceHistory.getId();
+////	try {
+////		String deflated = priceHistory.deflate();
+////		int index = priceHistoryContents.indexOf("<id>"+ticker+"</id>");
+////		if (index>-1){
+////			String s = priceHistoryContents.substring(0, index);
+////			int startIndex = s.lastIndexOf("<PS>")+4;
+////			int endIndex = getEndIndex(priceHistoryContents,"PS",startIndex);
+////			String preText = priceHistoryContents.substring(0, startIndex);
+////			String postText = priceHistoryContents.substring(endIndex, priceHistoryContents.length());
+////			String newText = preText + deflated + postText;
+////			priceHistoryContents = newText;
+////		} else {
+////			priceHistoryContents+="<PS>"+deflated+"</PS>";
+////		}
+////	} catch (Exception e) {
+////		String msg = "Exception caught while saving price history for "+ticker;
+////		System.err.println(msg);
+////	}
+////}
+//// Deprecated:
+////KTReader reader = StreamManager.getReader(item);
+////if (reader!=null) {
+////	boolean hadAtLeastOneElementOfThatType = false;
+////	boolean idTagWasFound = false;
+////	boolean itemWasFound = false;
+////	while (reader.hasElement(subElementTag)){
+////		hadAtLeastOneElementOfThatType = true;
+////		reader.advanceToElement(subElementTag);
+////		if (reader.hasElement(subElementIDTag,subElementTag)) {
+////			idTagWasFound = true;
+////			String identity = reader.getAttributeValue(subElementIDTag);
+////			if (identity.equals(item.getID())){
+////				itemWasFound = true;
+////				item.inflate(reader);
+////				break;
+////			}
+////		}
+////	}
+////	try {
+////		reader.close();
+////	} catch (IOException e) {
+////		defaultExceptionHandler(e);
+////	}
+////	
+////	if (!hadAtLeastOneElementOfThatType) {
+////		System.err.println("Could not find the element tag while loading. Element tag="+subElementTag);
+////	} else if (!idTagWasFound) {
+////		System.err.println("Could not find the id tag while loading. ID tag="+subElementIDTag);
+////	} else if (!itemWasFound) {
+////		System.err.println("Could not find the item while loading. ID="+item.getID());
+////	}
+////	
+////	return item;
+////} else {
+////	System.err.format("The reader could not be created while trying to load %s.%n", item.getID());
+////}
+//
+////public static void saveItems(KTSet<? extends KTObject> items) {
+////	if (items!=null && !items.isEmpty()) {
+////		if (items instanceof SRCompanySet) {
+////			SRCompany comp = (SRCompany) items;
+////			saveCompany(comp);
+////		} else if (items instanceof SRPriceHistorySet) {
+////			SRPriceHistorySet history = (SRPriceHistorySet) items;
+////			DataManager.savePriceHistories(history);
+////		} else if (items instanceof SREconomicRecordSet) {
+////			SREconomicRecordSet record = (SREconomicRecordSet) items;
+////			DataManager.saveEconomicRecords(record);
+////		} else {
+////			System.err.println("Could not save object: "+items.toString());
+////		}
+////	} else {
+////		System.err.println("A null or empty set of objects were given to the data manager to save.");
+////	}
+////}
+//
+////KTReader reader = StreamManager.getReader(SRCompanySet.class);
+////SRCompany company = null;
+////while (reader.hasElement(SRCompany.TAG,true)){
+////	reader.advanceToElement(SRCompany.TAG,true);
+////	String tick = reader.getAttributeValue(SRCompany.IDTAG,SRCompany.TAG);
+////	if (tick.equals(ticker)){
+////		company = new SRCompany();
+////		company.inflate(reader);
+////		break;
+////	}
+////}
+////close(reader);
+////
+////
+////KTReader reader = StreamManager.getReader(SREconomicRecordSet.class);
+////SREconomicRecord record = null;
+////while (reader.hasElement(SREconomicRecord.TAG,true)){
+////	reader.advanceToElement(SREconomicRecord.TAG,true);
+////	String identity = reader.getAttributeValue(SREconomicRecord.IDTAG,SREconomicRecord.TAG);
+////	if (identity.equals(id)){
+////		record = new SREconomicRecord();
+////		record.inflate(reader);
+////		break;
+////	}
+////}
+////close(reader);
+////return record;
+////
+////
+////KTReader reader = StreamManager.getReader(SRPriceHistorySet.class,tickerSymbol.charAt(0));
+////SRPriceHistory priceHistory = null;
+////while (reader.hasElement(SRPriceHistory.TAG,true)){
+////	reader.advanceToElement(SRPriceHistory.TAG,true);
+////	String identity = reader.getAttributeValue(SRPriceHistory.IDTAG,SRPriceHistory.TAG);
+////	if (identity.equals(tickerSymbol)){
+////		priceHistory = new SRPriceHistory();
+////		priceHistory.inflate(reader);
+////		break;
+////	}
+////}
+////close(reader);
+////return priceHistory;
+////	if (priceHistories!=null && !priceHistories.isEmpty()) {
+//// 		for (int i = 65;i<=90;i++) {
+////	 		char letter = (char)i;
+////	 		SRPriceHistorySet letterSet = priceHistories.getLetterSubSet(letter);
+////	 		if (letterSet.size()>0) {
+////	 			saveItems(letterSet,SRPriceHistory.TAG,SRPriceHistory.IDTAG,letter);
+////	 		}
+//// 		}
+////		} else {
+////			System.err.println("Warning: tried saving a null or empty set of price histories.");
+////		}
+////
+////if (obj!=null) {
+////	if (obj instanceof SRCompany) {
+////		SRCompany comp = (SRCompany) obj;
+////		saveCompany(comp);
+////	} else if (obj instanceof SRPriceHistory) {
+////		SRPriceHistory history = (SRPriceHistory) obj;
+////		SRPriceHistorySet saveable = new SRPriceHistorySet();
+////		saveable.add(history);
+////		DataManager.savePriceHistories(saveable);
+////	} else if (obj instanceof SREconomicRecord) {
+////		SREconomicRecord record = (SREconomicRecord) obj;
+////		SREconomicRecordSet saveable = new SREconomicRecordSet();
+////		saveable.add(record);
+////		DataManager.saveEconomicRecords(saveable);
+////	} else {
+////		System.err.println("Could not save object: "+obj.toString());
+////	}
+////} else {
+////	System.err.println("A null object was given to the data manager to save.");
+////}
+////for (int i=65;i<=90;i++) {
+////char letter = (char)i;
+////SRPriceHistorySet letterset = allPriceHistories.getLetterSubSet(letter);
+////KTWriter writer = StreamManager.getWriter(SRPriceHistorySet.class, letter);
+////letterset.deflate(writer);
+////close(writer);
+////}

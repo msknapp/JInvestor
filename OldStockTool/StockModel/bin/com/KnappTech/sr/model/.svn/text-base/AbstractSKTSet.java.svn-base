@@ -1,0 +1,118 @@
+package com.kt.sr.model;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+
+import com.kt.model.IdentifiableList;
+import com.kt.model.KTObject;
+import com.kt.model.KTSet;
+import com.kt.model.SemiKTO;
+import com.kt.view.report.ReportCell;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public abstract class AbstractSKTSet<E extends SemiKTO> 
+extends IdentifiableList<E,String>
+implements KTSet<E> {
+	private static final long serialVersionUID = 201101301028L;
+
+	public AbstractSKTSet() {}
+	
+	public AbstractSKTSet(Collection<E> items) {
+		super(items);
+	}
+	
+	protected AbstractSKTSet(AbstractSKTSet<E> otherList) {
+		super(otherList);
+	}
+	
+	@Override
+	public synchronized ReportRow getReportRow(ReportSettings settings) {
+		ReportRow row = new ReportRow();
+		row.add(new ReportCell("size",String.valueOf(items.size())));
+		for (E a : items) {
+			row.addAll(a.getReportRow(settings));
+		}
+		return row;
+	}
+	
+	protected void defaultExceptionHandler(Exception e) {
+		System.err.format("An exception was thrown by thread %s, in class %s, method %s%n" +
+				"   type: %s, message: %s%n" +
+				"   ", Thread.currentThread().getName(),getClass(),
+				Thread.currentThread().getStackTrace()[2].getMethodName(),
+				e.getClass(),e.getMessage());
+	}
+
+	public synchronized String getID() {
+		if (!items.isEmpty()) {
+			return items.iterator().next().getID();
+		} else {
+			System.err.println("Warning: asking for an id, but this object does not have a valid id.");
+		}
+		return toString(); // a silly default response.
+	}
+	
+	@Override 
+	public String toString() {
+		String str = "";
+		for (SemiKTO object : items) {
+			str+=object.getID()+", ";
+		}
+		if (str.length()>100) str = str.substring(0,100);
+		if (str.isEmpty()) str = "I am empty.";
+		return str;
+	}
+	
+	public synchronized LinkedHashSet<String> missingIDs(Collection<String> ids) {
+		return missingItems(ids);
+	}
+	
+	public synchronized Collection<E> getInvalidObjects() {
+		ArrayList<E> lis = new ArrayList<E>();
+		for (E obj : items) {
+			if (!obj.isValid()) {
+				lis.add(obj);
+			}
+		}
+		return lis;
+	}
+	
+	public synchronized int countInvalidObjects() {
+		return getInvalidObjects().size();
+	}
+	
+	public synchronized boolean hasInvalidObject() {
+		for (E obj : items) {
+			if (!obj.isValid()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public boolean equals(Object o) {
+		if (o instanceof KTObject) {
+			KTObject ko = (KTObject)o;
+			String s = getID();
+			String so = ko.getID();
+			if (s!=null && so!=null && !s.equals("") && !so.equals("")) {
+				return s.equals(so);
+			}
+		}
+		return false;
+	}
+	
+	public int hashCode() {
+		String s = getID();
+		if (s!=null && !s.equals("")) {
+			return s.hashCode()-589;
+		}
+		return -63281570;
+	}
+	
+	@Override
+	public boolean isValid() { return true; }
+	public abstract boolean save(boolean multiThread) throws InterruptedException;
+}

@@ -1,0 +1,56 @@
+package com.kt.sr.model.beans;
+
+import java.io.Serializable;
+
+import com.kt.sr.model.Financial.FinancialEntry;
+import com.kt.sr.model.Financial.FinancialStatementAtFrequency;
+import com.kt.sr.model.constants.StatementType;
+
+public class FSAFBean implements Serializable {
+	private static final long serialVersionUID = 201102052308L;
+	
+	private boolean quarterly = false;
+	private StatementType type = StatementType.INCOME;
+	private FEBean[] entries = null;
+	
+	public FSAFBean() {
+		
+	}
+	
+	public FSAFBean(FinancialStatementAtFrequency fsaf) {
+		this.setQuarterly(fsaf.isQuarterly());
+		this.setType(fsaf.getType());
+		setEntries(fsaf.getEntries());
+	}
+
+	public void setEntries(FEBean[] entries) {
+		this.entries = entries;
+	}
+	
+	public void setEntries(FinancialEntry[] entries) {
+		this.entries = new FEBean[entries.length];
+		for (int i = 0;i<entries.length;i++) {
+			this.entries[i] = new FEBean(entries[i]);
+		}
+	}
+
+	public FEBean[] getEntries() {
+		return entries;
+	}
+
+	public void setType(StatementType type) {
+		this.type = type;
+	}
+
+	public StatementType getType() {
+		return type;
+	}
+
+	public void setQuarterly(boolean quarterly) {
+		this.quarterly = quarterly;
+	}
+
+	public boolean isQuarterly() {
+		return quarterly;
+	}
+}

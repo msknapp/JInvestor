@@ -1,0 +1,31 @@
+package com.kt.sr.ctrl.acq;
+
+import com.kt.sr.ctrl.parse.BLSParser;
+import com.kt.sr.ctrl.parse.ERParser;
+import com.kt.sr.model.PropertyManager;
+import com.kt.sr.model.constants.SourceAgency;
+
+public class BLSRetriever extends ERRetriever {
+	// skipped workplace injuries, all state/county statistics, 
+	// international statistics (except imports/exports), and 
+	// regional statistics.
+	
+	public BLSRetriever() {
+		super(SourceAgency.BLS);
+	}
+	
+	public static void main(String[] args) {
+		BLSRetriever blsr = new BLSRetriever();
+		blsr.retrieve();
+	}
+
+	@Override
+	public ERParser getReader() {
+		return new BLSParser();
+	}
+
+	@Override
+	public String getSeriesPath() {
+		return PropertyManager.getBLSSeriesPath();
+	}
+}

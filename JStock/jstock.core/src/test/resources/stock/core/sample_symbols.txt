@@ -1,0 +1,10 @@
+Symbol	Description
+ADDA	AMEX Advance Decline Difference
+ADDD	OTC Advance Decline Difference
+ADDE	Etfs Advance - Decline
+ADDN	NYSE Advance Decline Difference
+ADDQ	NASD Advance Decline Difference
+ADDS	TSX Advance Decline Difference
+ADDT	Total Advance Decline Difference
+ADDV	Tsxv Advance Decline Difference
+ADDX	CAD Total Advance Decline Difference

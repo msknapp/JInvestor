@@ -1,0 +1,102 @@
+package com.kt.sr.model.comp;
+
+import java.util.List;
+
+import com.kt.model.LiteDate;
+import com.kt.model.ReportableSet;
+import com.kt.model.TimeFrame;
+import com.kt.model.UpdateFrequency;
+import com.kt.sr.model.Asset;
+import com.kt.sr.model.Regressable.Record;
+import com.kt.sr.model.Regressable.RecordList;
+import com.kt.sr.model.Regressable.RecordSet;
+import com.kt.sr.model.constants.CurrencyType;
+import com.kt.sr.model.constants.SourceAgency;
+import com.kt.view.report.Report;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class CurrencyExchange extends RecordList<Record> implements Asset, Cloneable {
+    private final CurrencyType type; // a good default. 
+    
+    public CurrencyExchange(CurrencyType type) {
+    	super(type.name(),SourceAgency.YAHOO);
+    	this.type = type;
+    }
+    
+    public CurrencyExchange(CurrencyExchange original) {
+    	super(original.getID(),original.getSourceAgency());
+    	this.type = original.type;
+    }
+    
+    public CurrencyExchange clone() {
+    	return new CurrencyExchange(this);
+    }
+
+	@Override
+	public List<Double> asFrequency(UpdateFrequency updateFrequency) {
+		// TODO as frequency
+		return null;
+	}
+
+	@Override
+	public void getRegressableList(LiteDate startDate, LiteDate endDate,
+			UpdateFrequency updateFrequency, int offset) {
+		// TODO get regressable list
+
+	}
+
+	@Override
+	public boolean isMultiple() {
+		// TODO is multiple
+		return false;
+	}
+
+	@Override
+	public TimeFrame getTimeFrame() {
+		return new TimeFrame(getStartDate(),getEndDate());
+	}
+
+	@Override
+	public boolean canBeNegative() {
+		return false;
+	}
+
+	@Override
+	public void update() throws InterruptedException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		return super.getReportRow(settings);
+	}
+
+	@Override
+	public Report getReport(ReportSettings settings) {
+		return super.getReport(settings);
+	}
+
+	@Override
+	public Record createRecord(LiteDate date, double value) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Currency getValueOfShare() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public int compareTo(String o) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	public CurrencyType getType() {
+		return type;
+	}
+}

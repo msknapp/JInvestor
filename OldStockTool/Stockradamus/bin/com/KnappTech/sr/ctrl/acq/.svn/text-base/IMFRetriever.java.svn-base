@@ -1,0 +1,28 @@
+package com.kt.sr.ctrl.acq;
+
+import com.kt.sr.ctrl.parse.ERParser;
+import com.kt.sr.ctrl.parse.IMFReader;
+import com.kt.sr.model.PropertyManager;
+import com.kt.sr.model.constants.SourceAgency;
+
+public class IMFRetriever extends ERRetriever {
+	
+	public IMFRetriever() {
+		super(SourceAgency.IMF);
+	}
+
+	public static void main(String[] args) {
+		IMFRetriever imfr = new IMFRetriever();
+		imfr.retrieve();
+	}
+
+	@Override
+	public ERParser getReader() {
+		return new IMFReader();
+	}
+
+	@Override
+	public String getSeriesPath() {
+		return PropertyManager.getIMFSeriesPath();
+	}
+}

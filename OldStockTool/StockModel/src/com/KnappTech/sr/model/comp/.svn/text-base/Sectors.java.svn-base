@@ -1,0 +1,22 @@
+package com.kt.sr.model.comp;
+
+import java.util.Collection;
+
+import com.kt.sr.model.NamedKTObjectSet;
+import com.kt.sr.persistence.SectorManager;
+
+public class Sectors extends NamedKTObjectSet<Sector> {
+	private static final long serialVersionUID = 201001230909L;
+
+	public Sectors() {
+		
+	}
+	
+	public Sectors(Collection<Sector> objects) {
+		super(objects);
+	}
+	@Override
+	public String getItemNameForID(short id) {
+		return SectorManager.getName(id);
+	}
+}

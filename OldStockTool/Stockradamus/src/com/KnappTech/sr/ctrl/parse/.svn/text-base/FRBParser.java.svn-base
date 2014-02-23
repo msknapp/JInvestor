@@ -1,0 +1,129 @@
+package com.kt.sr.ctrl.parse;
+
+import java.util.Scanner;
+
+import com.kt.model.LiteDate;
+import com.kt.sr.model.constants.SourceAgency;
+import com.kt.util.ConnectionCreater;
+import com.kt.util.DefaultConnectionCreater;
+
+public class FRBParser extends ERParser {
+	
+	@Override
+	public SourceAgency getSourceAgency() {
+		return SourceAgency.FRB;
+	}
+	
+	@Override
+	protected void updateER() throws InterruptedException {
+		int startIndex = data.indexOf(record.getID()+": ");
+		startIndex = data.indexOf(record.getID(),startIndex+1)-1;
+		int endIndex = data.indexOf(":",startIndex);
+		if (endIndex<0) endIndex = data.length();
+		else {
+			endIndex = data.lastIndexOf("\"", endIndex);
+		}
+		String relevantData = data.substring(startIndex, endIndex);
+		// I have narrowed it down to the relevant data.
+
+		if (Thread.interrupted()) {
+			throw new InterruptedException();
+		}
+		Scanner sc = new Scanner(relevantData); // .useDelimiter(Pattern.compile("[ \t\n\f\r]"));
+		String str = "";
+		int monthNumber = 0;
+		int workingYear = 0;
+		double dbl = 0;
+		LiteDate date = null;
+		String lineStart = "\""+record.getID()+"\"";
+		try {
+			while (sc.hasNext()) {
+				str = sc.next();
+				int indLineStart = str.indexOf(lineStart);
+				if (indLineStart==0) {
+					workingYear = Integer.parseInt(sc.next());
+					monthNumber=0;
+				} else if (indLineStart>0) {
+					str = str.substring(0,indLineStart);
+					dbl = Double.parseDouble(str);
+					date = LiteDate.getOrCreate(workingYear,monthNumber,1);
+					record.addOrReplace(date, dbl);
+					workingYear = Integer.parseInt(sc.next());
+					monthNumber=0;
+				} else { // indLineStart<0
+					dbl = Double.parseDouble(str);
+					date = LiteDate.getOrCreate(workingYear,monthNumber,1);
+					record.addOrReplace(date, dbl);
+					monthNumber++;
+				}
+				if (Thread.interrupted()) {
+					throw new InterruptedException();
+				}
+			}
+		} catch (InterruptedException e) {
+			throw e;
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	protected boolean isConstantURL() {
+		return true;
+	}
+
+	@Override
+	protected ConnectionCreater getConnectionCreater() {
+		String url = "http://www.federalreserve.gov/releases/g17/ipdisk/ip_sa.txt";
+		return DefaultConnectionCreater.create(url);
+	}
+	
+//	private static final transient String STARTTEXT = "<PRE STYLE=\"csv-output\">";
+//	
+//	public static void update(SREconomicRecord economicRecord) {
+//		record = economicRecord;
+//		String sourceURL = createURL();
+//		try {
+//			if (data.isEmpty()){
+//				data = Generic.retrieveWebPage(sourceURL, "GET");
+//			}
+//			updateER();
+//		} catch (IOException e) {
+//			// TODO manage io exception
+//			e.printStackTrace();
+//		} catch (Exception e) {
+//			// TODO manage exception
+//			e.printStackTrace();
+//		}
+//	}
+	
+//	private static void updateER() {
+//		
+//		
+//		
+//		int startIndex = data.indexOf(record.getId());
+//		
+//		int endIndex = DataUtility.getEndIndex(data, "PRE", startIndex);
+//		data = data.substring(startIndex, endIndex);
+//		// now the data has been trimmed to the section that I care about.
+//		startIndex = data.indexOf("year");
+//		int trueStart = data.indexOf('\n',startIndex)+1;
+//		String trueData = data.substring(trueStart, data.length());
+//		
+//		// TODO Auto-generated method stub
+//		Scanner scanner = new Scanner(trueData).useDelimiter(",");
+//		int month = 1;
+//		boolean go = true;
+//		while (go) {
+//			int year = Integer.parseInt(scanner.next());
+//			while(month<13){
+//				Double value = Double.valueOf(scanner.next());
+//				month++;
+//				TrendDate date = new TrendDate(year, month, 0);
+//				record.add(date, value);
+//			}
+//			scanner.nextLine();
+//		}
+//	}
+}

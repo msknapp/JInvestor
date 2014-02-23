@@ -1,0 +1,110 @@
+package com.kt.sr.model.Regressable;
+
+import java.util.Collection;
+
+import com.kt.model.ReportableSet;
+import com.kt.sr.ctrl.parse.PriceHistoryParser;
+import com.kt.sr.persistence.CompanyManager;
+import com.kt.sr.persistence.PriceHistoryManager;
+import com.kt.util.KTTimer;
+import com.kt.view.report.ReportCell;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class PriceHistories extends RecordSet<PriceHistory> implements ReportableSet {
+	private static final long serialVersionUID = 201010092234L;
+	
+	public PriceHistories() {
+		
+	}
+	
+	public PriceHistories(Collection<PriceHistory> c) {
+		super(c);
+	}
+
+	@Override
+	public PriceHistories createInstance() {
+		return new PriceHistories();
+	}
+
+	public PriceHistories getLetterSubSet(char letter) {
+		PriceHistories letterset = new PriceHistories();
+		for (PriceHistory hist : items) {
+			if (hist.getID().charAt(0)==letter) {
+				letterset.add(hist);
+			}
+		}
+		return letterset;
+	}
+
+	@Override
+	public String getID() {
+		return "";
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		ReportRow row = new ReportRow();
+		row.add(new ReportCell("size",String.valueOf(size())));
+		return row;
+	}
+	
+	public void updateBetas(char currentChar, PriceHistory indicator, double varianceOfIndicator) {
+		for (PriceHistory priceHistory : items) {
+			String id = priceHistory.getID();
+			if (id!=null && id.length()>0 && id.charAt(0)==currentChar) {
+				try {
+					System.out.println("Now working on "+priceHistory.getID());
+					String msg = "Took too long to calculate beta for "+priceHistory.getID();
+					KTTimer timer = new KTTimer("beta stopper", 20, msg, true);
+					double cov = priceHistory.calculateCovarianceOfReturn(indicator);
+					double beta = cov/varianceOfIndicator;
+					priceHistory.setBeta(beta);
+					if (priceHistory.isValid()) {
+						PriceHistoryManager.save(priceHistory,true);
+					} else {
+						System.err.println("Price history did not validate!");
+					}
+					timer.stop();
+					Thread.interrupted();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			} else {
+				System.err.println("Given a wrong company! company = "+
+						id+", letter = "+currentChar);
+			}
+		}
+	}
+
+	@Override
+	public boolean save(boolean multiThread) throws InterruptedException {
+		boolean worked = true;
+		for (PriceHistory priceHistory : items) {
+			if (!PriceHistoryManager.save(priceHistory, true)) {
+				worked = false;
+			}
+		}
+		return worked;
+	}
+	
+	public void update() {
+		for (PriceHistory history : items) {
+			try {
+				System.out.println("Now working on company: "+history.getID());
+				PriceHistoryParser.setPriceHistory(history);
+				PriceHistoryParser.update();
+				if (history.isValid()) {
+					PriceHistoryManager.save(history,true);
+				}
+				String id = history.getID();
+				CompanyManager.remove(id);
+				PriceHistoryManager.remove(id);
+			} catch (Exception e) {
+				String msg = "Exception caught while downloading price history";
+				System.err.println(msg);
+				e.printStackTrace();
+			}
+		}
+	}
+}

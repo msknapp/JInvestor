@@ -1,0 +1,100 @@
+package com.kt.model;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+
+public class LiteDates {
+	private final ArrayList<LiteDate> dates = new ArrayList<LiteDate>();
+	private static final LiteDates instance = new LiteDates();
+	
+	private LiteDates(){}
+	
+	public static final LiteDate getOrCreate() {
+		initializeOnceOnly();
+		Calendar cal = Calendar.getInstance();
+		return getOrCreate(cal);
+	}
+	
+	public static final LiteDate getOrCreate(Calendar cal) {
+		// the lite date manages updating this list during creation.
+		initializeOnceOnly();
+		return LiteDate.getOrCreate(cal);
+	}
+	
+	public static final LiteDate getOrCreate(int field,int offset) {
+		initializeOnceOnly();
+		return LiteDate.getOrCreate(field, offset);
+	}
+	
+	public static final LiteDate getOrCreate(Calendar cal,int field,int offset) {
+		initializeOnceOnly();
+		return LiteDate.getOrCreate(cal, field, offset);
+	}
+	
+	public static final LiteDate getOrCreate(int tYear, int tMonth, int tDay) {
+		initializeOnceOnly();
+		return LiteDate.getOrCreate(tYear, tMonth, tDay);
+	}
+	
+	private static final void initializeOnceOnly() {
+		LiteDate.initializeOnceOnly();
+	}
+	
+	// not private, so LiteDate can add them.
+	static final boolean add(LiteDate d) {
+		return instance.iAdd(d);
+	}
+	
+	static final boolean addAll(Collection<LiteDate> ds) {
+		return instance.iAddAll(ds);
+	}
+	
+	private synchronized final boolean iAddAll(Collection<LiteDate> ds) {
+		boolean pass = true;
+		for (LiteDate d : ds) {
+			if (d!=null && !iHas(d)) {
+				boolean b = dates.add(d);
+				pass = pass && b;
+			} else {
+				pass=false;
+			}
+		}
+		Collections.sort(dates);
+		return pass;
+	}
+	
+	private synchronized final boolean iAdd(LiteDate d) {
+		if (d!=null && !iHas(d)) {
+			boolean b = dates.add(d);
+			if (b) {
+				Collections.sort(dates);
+			}
+			return b;
+		}
+		return false;
+	}
+	
+	static final LiteDate get(LiteDate d) {
+		return instance.iGet(d);
+	}
+	
+	private synchronized final LiteDate iGet(LiteDate d) {
+		int i = Collections.binarySearch(dates, d);
+		return dates.get(i);
+	}
+	
+	private static final boolean has(LiteDate d) {
+		return instance.iHas(d);
+	}
+	
+	private synchronized final boolean iHas(LiteDate d) {
+		int i = Collections.binarySearch(dates, d);
+		return i>=0;
+	}
+	
+	public static synchronized final int size() {
+		return instance.dates.size();
+	}
+}

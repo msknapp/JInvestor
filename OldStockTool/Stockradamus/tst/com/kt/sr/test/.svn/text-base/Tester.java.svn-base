@@ -1,0 +1,234 @@
+package com.kt.sr.test;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+
+import com.kt.sr.ctrl.acq.BLSRetriever;
+import com.kt.sr.ctrl.acq.SLFRetriever;
+import com.kt.sr.ctrl.reg.ERRegresser;
+import com.kt.sr.ctrl.reg.RegressionManager;
+import com.kt.sr.ctrl.reg.RegressionRater;
+import com.kt.sr.model.Financial.FinancialHistory;
+import com.kt.sr.model.Regressable.EconomicRecord;
+import com.kt.sr.model.Regressable.EconomicRecords;
+import com.kt.sr.model.Regressable.PriceHistories;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.model.comp.Companies;
+import com.kt.sr.model.comp.Company;
+import com.kt.sr.model.comp.RegressionResult;
+import com.kt.sr.model.comp.RegressionResults;
+import com.kt.sr.persistence.CompanyManager;
+import com.kt.sr.persistence.EconomicRecordManager;
+import com.kt.sr.persistence.FinancialHistoryManager;
+import com.kt.sr.persistence.PriceHistoryManager;
+import com.kt.util.MultipleDataPoints;
+
+public class Tester {
+	
+	public Tester() {}
+	
+	public static void main(String[] args) {
+		Tester t = new Tester();
+		t.mything();
+		
+	}
+	
+	private void mything() {
+		try {
+			PriceHistory ph = PriceHistoryManager.getIfStored("AA");
+			System.out.println("hi");
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	private void rrclear() {
+		try {
+			CompanyManager.loadEverythingStored();
+			Companies cc = CompanyManager.getAllThatAreLoaded();
+			cc.clearRegressionResults();
+			CompanyManager.saveAll(cc, true);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void test11() {
+		try {
+			EconomicRecord er1 = EconomicRecordManager.getIfStored("AMBNS");
+			EconomicRecord er2 = EconomicRecordManager.getIfStored("G3342");
+			EconomicRecord er3 = EconomicRecordManager.getIfStored("IPMAT");
+			EconomicRecord er4 = EconomicRecordManager.getIfStored("MCUMFN");
+			EconomicRecord er5 = EconomicRecordManager.getIfStored("N3371");
+			EconomicRecord er6 = EconomicRecordManager.getIfStored("NFINCP");
+			EconomicRecord er7 = EconomicRecordManager.getIfStored("OILPRICE");
+//			EconomicRecord er8 = EconomicRecordManager.getIfStored("PCEND");
+			EconomicRecord er9 = EconomicRecordManager.getIfStored("REALLN");
+			EconomicRecord er10 = EconomicRecordManager.getIfStored("REPT");
+//			EconomicRecord er11 = EconomicRecordManager.getIfStored("ADJRESN");
+			EconomicRecord er12 = EconomicRecordManager.getIfStored("STDNS");
+			EconomicRecord er13 = EconomicRecordManager.getIfStored("TOTALFC");
+			EconomicRecord er14 = EconomicRecordManager.getIfStored("TREAST");
+//			EconomicRecord er15 = EconomicRecordManager.getIfStored("WLTA");
+			EconomicRecord er16 = EconomicRecordManager.getIfStored("X52HTV");
+			ArrayList<EconomicRecord> r = new ArrayList<EconomicRecord>();
+			r.add(er1);
+			r.add(er2);
+			r.add(er3);
+			r.add(er4);
+			r.add(er5);
+			r.add(er6);
+			r.add(er7);
+//			r.add(er8);
+//			r.add(er9);
+//			r.add(er10);
+//			r.add(er11);
+			r.add(er12);
+			r.add(er13);
+			r.add(er14);
+//			r.add(er15);
+			r.add(er16);
+			EconomicRecords ers = new EconomicRecords(r);
+			PriceHistory ph = PriceHistoryManager.getIfStored("GE");
+			MultipleDataPoints mdp = ers.getMultipleDataPoints(ph);
+			System.out.println("Variance: "+mdp.getVariance());
+			System.out.println("St Dev: "+mdp.getStDev());
+			System.out.println("R2: "+mdp.getCoeffOfDetermination());
+			String s = "";
+			for (String id : mdp.getxID()) {
+				s+=id+", ";
+			}
+			System.out.println(s);
+			for (String id : mdp.getxID()) {
+				System.out.println("Error for "+id+": "+mdp.getError(id));
+			}
+			for (int i = 0;i<ers.size();i++) {
+				System.out.println("Error for "+i+": "+mdp.getError(i));
+			}
+			System.out.println("Largest error id: "+mdp.getIDofLargestError());
+			
+			RegressionRater rr = new RegressionRater(ph,ers);
+			rr.evaluate();
+			RegressionResult rs = rr.getResults();
+			System.out.println("Last valid value: "+ph.getLastValidValue());
+			System.out.println("estimate r2: "+rs.getCoefficientOfDetermination());
+			System.out.println("estimate st dev: "+rs.getStandardDeviation());
+			System.out.println("estimate: "+rs.getUpToDateEstimate());
+			System.out.println("estimated last value from mdp: "+mdp.estimateLastValue());
+			System.out.println("MDP:\n"+mdp.getLastValuesDebugString());
+			System.out.println("Res:\n"+rs.toString());
+			System.out.println("Res:\n"+rs.seeMath());
+			System.out.println("mdp:\n"+mdp.seeMath());
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void test10() {
+		try {
+			FinancialHistory fh = FinancialHistoryManager.getIfStored("AERG");
+			System.out.println(fh);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	private void test9() {
+		Company company;
+		try {
+			company = CompanyManager.getIfStored("A");
+			company.loadPriceHistory();
+			PriceHistory ph = company.getPriceHistory();
+			ERRegresser r = new ERRegresser();
+			EconomicRecordManager.getEverythingStored('B');
+			r.executeRegression(company);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	private void test6() {
+		try {
+			EconomicRecords ers = EconomicRecordManager.getEverythingStored(false);
+			System.out.println("size: "+ers.size());
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+
+	private void test7() {
+		try {
+			PriceHistories phs = PriceHistoryManager.getEverythingStored('A');
+			PriceHistory ph = phs.getLargestRecord();
+			System.out.println("largest size: "+ph.size());
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void test1() {
+		try {
+			Company c = CompanyManager.getIfStored("AB");
+			System.out.println("company loaded: "+c!=null);
+			System.out.println("company industry: "+c.getIndustryName());
+			System.out.println("company sector: "+c.getSectorName());
+			System.out.println("Company regression size: "+c.getRegressionResultsSet().size());
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void test2() {
+		try {
+			PriceHistory ph = PriceHistoryManager.getIfStored("^DJI");
+			System.out.println("price history loaded: "+ph!=null);
+			System.out.println("price history size: "+ph.size());
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void test3() {
+		try {
+			EconomicRecord er = EconomicRecordManager.getIfStored("B51000");
+			System.out.println("economic record loaded: "+er!=null);
+			System.out.println("economic record size: "+er.size());
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void test4() {
+		try {
+			PriceHistory ph = PriceHistoryManager.getIfStored("ABBC");
+			Set<String> ids = new HashSet<String>();
+			ids.add("B51100");
+			ids.add("G32199");
+			ids.add("TP10L15");
+			EconomicRecords ers = EconomicRecordManager.getAllThatAreStored(ids);
+			MultipleDataPoints mdps = ers.getMultipleDataPoints(ph);
+			System.out.println("multiple data points size: "+mdps.lengthY());
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+//	private void test8() {
+//		try {
+//			Company company = CompanyManager.getIfStored("ADRD");
+//			company.loadPriceHistory();
+//			EconomicRecordManager.getEverythingStored(false);
+//			RegressionManager r = new RegressionManager();
+//			r.regressCompany(company);
+//			System.out.println("company is regressed: "+String.valueOf(company.getRegressionResultsSet().size()>0));
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
+//	}
+}

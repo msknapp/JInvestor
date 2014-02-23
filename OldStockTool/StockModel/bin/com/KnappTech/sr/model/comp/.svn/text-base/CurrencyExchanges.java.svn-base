@@ -1,0 +1,73 @@
+package com.kt.sr.model.comp;
+
+import java.util.Collection;
+
+import com.kt.model.ReportableSet;
+import com.kt.sr.model.Regressable.RecordSet;
+import com.kt.sr.model.constants.CurrencyType;
+import com.kt.view.report.Report;
+import com.kt.view.report.ReportCell;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class CurrencyExchanges extends RecordSet<CurrencyExchange> implements ReportableSet {
+	private static final long serialVersionUID = 201001181309L;
+	
+	public CurrencyExchanges() {
+		
+	}
+	
+	public CurrencyExchanges(Collection<CurrencyExchange> currencies) {
+		super(currencies);
+	}
+
+	@Override
+	public int compareTo(String o) {
+		return 0;
+	}
+
+	@Override
+	public CurrencyExchanges createInstance() {
+		return new CurrencyExchanges();
+	}
+
+	@Override
+	public Report getReport(ReportSettings settings) {
+		Report report = new Report(settings);
+		for (CurrencyExchange curr : items) {
+			report.add(curr.getReportRow(settings));
+		}
+		return report;
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		ReportRow row = new ReportRow();
+		row.add(new ReportCell("size",String.valueOf(items.size())));
+		return row;
+	}
+	
+	public CurrencyExchanges clone() {
+		CurrencyExchanges c = new CurrencyExchanges();
+		for (CurrencyExchange cc : items) {
+			c.add((CurrencyExchange) cc.clone());
+		}
+		return c;
+	}
+	
+	public String toString() {
+		String s = "";
+		for (CurrencyExchange c : items) {
+			s+=c.toString()+"\n";
+		}
+		if (s.length()<1) {
+			s+="There is no money in this.";
+		}
+		return s;
+	}
+
+	@Override
+	public boolean save(boolean multiThread) {
+		return false;
+	}
+}

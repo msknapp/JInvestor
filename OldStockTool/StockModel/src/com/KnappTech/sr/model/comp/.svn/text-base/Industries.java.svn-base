@@ -1,0 +1,23 @@
+package com.kt.sr.model.comp;
+
+import java.util.Collection;
+
+import com.kt.sr.model.NamedKTObjectSet;
+import com.kt.sr.persistence.IndustryManager;
+
+public class Industries extends NamedKTObjectSet<Industry> {
+	private static final long serialVersionUID = 201001230907L;
+    
+	public Industries() {
+		
+	}
+	
+	public Industries(Collection<Industry> objects) {
+		super(objects);
+	}
+
+	@Override
+	public String getItemNameForID(short id) {
+		return IndustryManager.getName(id);
+	}
+}

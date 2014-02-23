@@ -1,0 +1,12 @@
+package com.kt.model;
+
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+/**
+ * If it can be included in a report, it must implement these methods.
+ * @author msknapp
+ */
+public interface Reportable {
+	public ReportRow getReportRow(ReportSettings settings);
+}

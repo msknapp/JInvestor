@@ -1,0 +1,78 @@
+package com.KnappTech.util;
+
+import java.util.HashMap;
+import java.util.Set;
+
+public class CodeStalker {
+	private static HashMap<String,CodeStalker> codeData = new HashMap<String,CodeStalker>();
+	private static final boolean ENABLED = false;
+	private int timesCalled = 0;
+	private long cumulativeTime = 0;
+	private long lastStartTime = 0;
+	
+	private CodeStalker(String name) {
+		if (ENABLED) {
+			if (name!=null && !name.equals("")) {
+				if (!name.equals("READONLY")) {
+					codeData.put(name, this);
+				}
+			} else {
+				System.err.println("Tried declaring a code stalker with no name.");
+			}
+		}
+	}
+	
+	public static void startMethod(String name) {
+		if (ENABLED) {
+			if (name!=null && !name.equals("")) {
+				if (!name.equals("READONLY")) {
+					CodeStalker cs = codeData.get(name);
+					if (cs==null) {
+						cs = new CodeStalker(name);
+					}
+					cs.timesCalled++;
+					cs.lastStartTime = System.currentTimeMillis();
+				}
+			} else {
+				System.err.println("Tried starting a code stalker with no name.");
+			}
+		}
+	}
+	
+	public static void finishMethod(String name) {
+		if (ENABLED) {
+			if (name!=null && !name.equals("")) {
+				if (!name.equals("READONLY")) {
+					CodeStalker cs = codeData.get(name);
+					if (cs!=null) {
+						long delta = System.currentTimeMillis()-cs.lastStartTime;
+						cs.cumulativeTime+=delta;
+					} else {
+						System.err.println("Warning: code stalker could not find the method name: "+name);
+					}
+				}
+			} else {
+				System.err.println("Tried finishing a code stalker with no name.");
+			}
+		}
+	}
+	
+	public static CodeStalker createReadOnly() {
+		return new CodeStalker("READONLY");
+	}
+	
+	public String toString() {
+		String str = "";
+		if (!codeData.isEmpty()) {
+			Set<String> keys = codeData.keySet();
+			for (String key : keys) {
+				CodeStalker cs = codeData.get(key);
+				double sec = ((double)Math.round(((double)cs.cumulativeTime)/100))/10;
+				str += key + ": called "+cs.timesCalled+" times, used "+sec+" seconds.\n";
+			}
+		} else {
+			str = "No code data has been recorded.";
+		}
+		return str;
+	}
+}

@@ -1,0 +1,91 @@
+package com.kt.sr.model.comp;
+
+//import java.io.IOException;
+
+import java.io.Serializable;
+
+import com.kt.model.KTSet;
+import com.kt.model.LiteDate;
+import com.kt.sr.model.AbstractKTSet;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class RegressionResults extends AbstractKTSet<RegressionResult>
+		implements KTSet<RegressionResult>, Serializable {
+	private static final long serialVersionUID = 201003271025L;
+	
+	public RegressionResults() {
+		super();
+	}
+	
+	public RegressionResults(RegressionResults original) {
+		super(original);
+	}
+
+	public String[][] getEntries() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public String[] getEntryColumnNames() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	public RegressionResult getMostRecent() {
+		RegressionResult mostRecent = null;
+		LiteDate mostRecentDate = LiteDate.getOrCreate(1980,0,1);
+		for (RegressionResult res : items) {
+			if (res.getCreationDate().after(mostRecentDate)) {
+				mostRecent=res;
+				mostRecentDate = res.getCreationDate();
+			} else if (res.getCreationDate().equals(mostRecentDate)) {
+				if (res.isR2GreaterThan(mostRecent.getCoefficientOfDetermination())) {
+					mostRecent=res;
+					mostRecentDate = res.getCreationDate();
+				}
+			}
+		}
+		return mostRecent;
+	}
+
+	public RegressionResult getMostAccurate() {
+		RegressionResult mostAccurate = null;
+		double highestR2 = -1;
+		for (RegressionResult res : items) {
+			if (res.getCoefficientOfDetermination()>highestR2) {
+				mostAccurate=res;
+				highestR2 = res.getCoefficientOfDetermination();
+			}
+		}
+		if (highestR2==0) {
+			double lowestVariance = Double.MAX_VALUE;
+			for (RegressionResult res : items) {
+				if (res.getRegressandVariance()<lowestVariance) {
+					mostAccurate=res;
+					lowestVariance = res.getRegressandVariance();
+				}
+			}
+		}
+		return mostAccurate;
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		return super.getReportRow(settings);
+	}
+
+	@Override
+	public int compareTo(String o) {
+		return 0;
+	}
+
+	@Override
+	public boolean save(boolean multiThread) throws InterruptedException {
+		return false;
+	}
+	
+	public synchronized final RegressionResults clone() {
+		return new RegressionResults(this);
+	}
+}

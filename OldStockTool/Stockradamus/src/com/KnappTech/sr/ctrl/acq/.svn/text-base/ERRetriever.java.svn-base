@@ -1,0 +1,79 @@
+package com.kt.sr.ctrl.acq;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Scanner;
+
+import com.kt.sr.ctrl.parse.ERParser;
+import com.kt.sr.model.Regressable.EconomicRecord;
+import com.kt.sr.model.Regressable.EconomicRecords;
+import com.kt.sr.model.constants.SourceAgency;
+import com.kt.sr.persistence.EconomicRecordManager;
+
+public abstract class ERRetriever {
+	private final SourceAgency sourceAgency;
+	
+	public ERRetriever(SourceAgency sourceAgency) {
+		this.sourceAgency = sourceAgency;
+	}
+
+	protected void retrieve() {
+		Collection<EconomicRecord> newRecords = getERList();
+		EconomicRecords myRecords = null;
+		HashSet<String> idsWithLetter = null;
+		int a = (int)('A');
+		int z = (int)('Z');
+		for (int c = a;c<=z;c++) {
+			EconomicRecordManager.clear();
+			idsWithLetter = new HashSet<String>();
+			HashSet<EconomicRecord> recordsWithLetter = new HashSet<EconomicRecord>();
+			for (EconomicRecord er : newRecords) {
+				String id = er.getID();
+				if ((int)(id.charAt(0))==c) {
+					idsWithLetter.add(id);
+					recordsWithLetter.add(er);
+				}
+			}
+			try {
+				System.out.println("waiting for all economic records to load. There are "
+						+idsWithLetter.size()+" to load.");
+				myRecords = EconomicRecordManager.getAllThatAreStored(idsWithLetter,true);
+				System.out.println("Finished loading all economic records.  In memory there are "
+						+myRecords.size()+" loaded.");
+				ERParser parser = getReader();
+				myRecords.addAll(recordsWithLetter);
+				myRecords.update(parser);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private Collection<EconomicRecord> getERList() {
+		File file = new File(getSeriesPath());
+		Scanner fr = null;
+		ArrayList<EconomicRecord> ers = new ArrayList<EconomicRecord>();
+		try {
+			fr = new Scanner(file);
+			while (fr.hasNext()) {
+				EconomicRecord er = EconomicRecord.createInstance(fr.next(), sourceAgency);
+				if (!ers.add(er)) {
+					System.err.println("Warning: failed to add an economic record to the set.");
+				}
+			}
+			if (ers.size()<1) {
+				System.err.println("Warning: failed to get the er list.");
+			}
+		} catch (Exception e) {
+			System.err.println("Exception caught while trying to get ER list.");
+			e.printStackTrace();
+		}
+		return ers;
+	}
+	
+	public abstract String getSeriesPath();
+	
+	public abstract ERParser getReader();
+}

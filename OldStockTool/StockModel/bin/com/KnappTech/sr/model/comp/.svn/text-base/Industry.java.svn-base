@@ -1,0 +1,39 @@
+package com.kt.sr.model.comp;
+
+import com.kt.sr.model.NamedKTObject;
+import com.kt.sr.persistence.IndustryManager;
+
+public class Industry extends NamedKTObject {
+	private static final long serialVersionUID = 201005182222L;
+	
+	private Industry(short index,String name) {
+		super(index,name);
+	}
+
+	@Override
+	public int compareTo(String o) {
+		return getID().compareTo(o);
+	}
+	
+	protected static IndustryManager i() {
+		return IndustryManager.i();
+	}
+	
+	public static final Industry getOrCreate(String name) {
+		Industry nkto = i().getItem(name);
+		if (nkto==null) {
+			nkto = createInstance(name);
+		}
+		return nkto;
+	}
+	
+	public static final Industry createInstance(String name) {
+		if (!i().has(name)) {
+			short ind = (short)i().size();
+			Industry nkto = new Industry(ind,name);
+			i().add(nkto);
+			return nkto;
+		}
+		return null;
+	}
+}

@@ -1,0 +1,184 @@
+package com.kt.sr.model.comp;
+
+import com.kt.model.SemiKTO;
+import com.kt.sr.model.Regressable.EconomicRecord;
+import com.kt.sr.model.Regressable.Record;
+import com.kt.sr.model.Regressable.RecordList;
+import com.kt.view.report.ReportCell;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class Indicator implements SemiKTO {
+	private static final long serialVersionUID = 201004181219L;
+	
+	// Stored fields:
+	private final String id;
+	private final double factor;
+	private final double error;
+	private final byte type; // economic record by default.
+	
+	// optional fields (Not stored):
+	private transient double lastValue = 0;
+	private transient RecordList<? extends Record> record = null;
+	
+	private Indicator(String id, double factor,double error,byte type) {
+		this.id = id;
+		this.factor = factor;
+		this.error = error;
+		this.type = type;
+	}
+	
+	public static final Indicator create(String id, double factor,double error,byte type) {
+		if (id!=null && id.length()>0 && factor!=0 && error!=0 && type>=0) {
+			Indicator ind = new Indicator(id,factor,error,type);
+			return ind;
+		}
+		return null;
+	}
+	
+	public static final Indicator create(RecordList<? extends Record> record,
+			double factor,double error) {
+		String id = record.getID();
+		byte type = 1;
+		if (record.getClass().equals(EconomicRecord.class)) {
+			type = 0;
+		}
+		if (id!=null && id.length()>0 && factor!=0 && error!=0 && type>=0) {
+			Indicator ind = new Indicator(id,factor,error,type);
+			ind.setRecord(record);
+			return ind;
+		}
+		return null;
+	}
+	
+	public void setRecord(RecordList<? extends Record> record) {
+		if ((record.getClass().equals(EconomicRecord.class) && type==0) || type==1) {
+			this.record = record;
+			setLastValue(record.getLastValidValue());
+		}
+	}
+	
+	@Override
+	public int hashCode() {
+		int hc = getID().toLowerCase().hashCode();
+		if (hc < Integer.MAX_VALUE) hc++;
+		else hc=Integer.MIN_VALUE;
+		return hc;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof Indicator) {
+			Indicator otherIndicator = (Indicator) obj;
+			return (otherIndicator.getID().equalsIgnoreCase(getID()));
+		}
+		return false;
+	}
+	
+	public String getID() {
+		return id;
+	}
+	
+	public double getFactor() {
+		return factor;
+	}
+	
+	public double getError() {
+		return error;
+	}
+	
+	public void setLastValue(double lastValue) {
+		this.lastValue = lastValue;
+	}
+	
+	public double getLastValue() {
+		return lastValue;
+	}
+
+	public double getProduct() {
+		return getProduct(true);
+	}
+	
+	public double getProduct(boolean checkLastValue) {
+		if (factor==0) {
+			System.err.println("Warning: trying to get an indicators product, but factor is 0 for "+getID());
+		}
+		if (checkLastValue && lastValue==0) {
+			System.err.println("Warning: trying to get an indicators product, but last value is 0 for "+getID());
+		}
+		return (factor*lastValue);
+	}
+	
+	public double getProduct(double lastValue) {
+		return (factor*lastValue);
+	}
+	public RecordList<? extends Record> getRecord() {
+		return record;
+	}
+
+//	@Override
+//	public KTObject createInstance() {
+//		return new Indicator();
+//	}
+
+//	@Override
+//	public boolean validated() {
+//		if (getID()!=null && !getID().equals("") ) {
+//			if (getFactor()!=0 && getType()>=0) {
+//				if (getError()<=0) {
+//					System.err.println("Warning: have a negative or 0 error for indicator: "+getID());
+//				}
+//				return true;
+//			}
+//		}
+//		return false;
+//	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		ReportRow row = new ReportRow();
+		row.add(new ReportCell("indicator",getID()));
+		row.add(new ReportCell("factor",String.valueOf(getFactor())));
+		row.add(new ReportCell("error",String.valueOf(getError())));
+		row.add(new ReportCell("last value",String.valueOf(getLastValue())));
+		return row;
+	}
+
+	@Override
+	public int compareTo(String other) {
+		return getID().compareTo(other);
+	}
+	
+	@Override
+	public String toString() {
+		if (getID()==null || getID().equals("")) {
+			return "Unidentified indicator";
+		} else {
+			String str = getID()+": Factor="+getFactor()+", Last Value="+getLastValue()+", Product="+getProduct(false)+", Error="+getError();
+			return str;
+		}
+	}
+
+	public byte getType() {
+		return type;
+	}
+	
+//	public void setTypeClass(Class<? extends RecordList<Record>> type) {
+//		if (type.equals(EconomicRecord.class)) {
+//			this.type = 0;
+//		}
+//		this.type = -1;
+//	}
+	
+	public Class<? extends RecordList<Record>> getTypeClass() {
+		if (type==0) {
+			return EconomicRecord.class;
+		}
+		return null;
+	}
+
+	@Override
+	public boolean isValid() {
+		return true;
+	}
+}

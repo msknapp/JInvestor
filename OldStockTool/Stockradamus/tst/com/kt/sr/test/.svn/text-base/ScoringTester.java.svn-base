@@ -1,0 +1,28 @@
+package com.kt.sr.test;
+
+import com.kt.sr.model.Financial.FinancialHistory;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.model.comp.Company;
+import com.kt.sr.model.comp.RegressionResult;
+import com.kt.sr.model.user.ScoringMethod;
+import com.kt.sr.persistence.CompanyManager;
+import com.kt.sr.persistence.FinancialEntryTypesManager;
+import com.kt.sr.persistence.FinancialHistoryManager;
+import com.kt.sr.persistence.PriceHistoryManager;
+
+public class ScoringTester {
+	public static void main(String[] args) {
+		FinancialEntryTypesManager.Load();
+		try {
+			Company company = CompanyManager.getIfStored("AZN");
+			PriceHistory ph = PriceHistoryManager.getIfStored("AZN");
+			FinancialHistory fh = FinancialHistoryManager.getIfStored("AZN");
+			RegressionResult r = company.getRegressionResultsSet().getMostAccurate();
+			double score = new ScoringMethod().getScore(r, fh, ph);
+			System.out.println(score);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+	}
+}

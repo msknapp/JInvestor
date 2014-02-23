@@ -1,0 +1,46 @@
+package com.kt.sr.model.Financial;
+
+import com.kt.sr.model.NamedKTObject;
+import com.kt.sr.persistence.FinancialEntryTypesManager;
+
+public class FinancialEntryType extends NamedKTObject {
+	private static final long serialVersionUID = 201011122036L;
+	
+	private FinancialEntryType(short index, String s) {
+		super(index,s);
+	}
+	
+	protected static FinancialEntryTypesManager i() {
+		return FinancialEntryTypesManager.i();
+	}
+	
+	public static FinancialEntryType getOrCreate(String name) {
+		FinancialEntryTypesManager.LoadIfNecessary();
+		FinancialEntryType nkto = i().getItem(name);
+		if (nkto==null) {
+			nkto = createInstance(name);
+		}
+		return nkto;
+	}
+	
+	public static final FinancialEntryType createInstance(String name) {
+		FinancialEntryTypesManager.LoadIfNecessary();
+		if (!i().has(name)) {
+			short ind = (short)i().size();
+			FinancialEntryType nkto = new FinancialEntryType(ind,name);
+			i().add(nkto);
+			return nkto;
+		}
+		return null;
+	}
+	
+	public String toString() {
+		return getName();
+	}
+
+	@Override
+	public int compareTo(String o) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+}

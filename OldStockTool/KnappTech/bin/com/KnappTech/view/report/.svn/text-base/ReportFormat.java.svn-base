@@ -1,0 +1,53 @@
+package com.kt.view.report;
+
+import java.text.NumberFormat;
+import java.util.Locale;
+
+public enum ReportFormat {
+	USCURRENCY (getUSCurrencyFormat()),
+	PERCENT (getPercentFormat()),
+	SIMPLE (getSimpleFormat()),
+	THREEDECIMAL (getThreeDecimalFormat());
+	
+	private NumberFormat nf = null;
+	
+	private ReportFormat(NumberFormat nf) {
+		this.nf = nf;
+	}
+	
+	public String format(double dbl) {
+		return nf.format(dbl);
+	}
+	
+	private static NumberFormat getUSCurrencyFormat() {
+		NumberFormat usCurrencyFormat = NumberFormat.getCurrencyInstance(Locale.US);
+		usCurrencyFormat.setMinimumFractionDigits(2);
+		usCurrencyFormat.setMaximumFractionDigits(2);
+		usCurrencyFormat.setMinimumIntegerDigits(1);
+		usCurrencyFormat.setParseIntegerOnly(false);
+		return usCurrencyFormat;
+	}
+	
+	private static NumberFormat getPercentFormat() {
+		NumberFormat percentFormat = NumberFormat.getPercentInstance(Locale.US);
+		percentFormat.setMinimumFractionDigits(1);
+		percentFormat.setMaximumFractionDigits(1);
+		percentFormat.setMinimumIntegerDigits(1);
+		percentFormat.setParseIntegerOnly(false);
+		return percentFormat;
+	}
+	
+	private static NumberFormat getSimpleFormat() {
+		NumberFormat simpleFormat = NumberFormat.getInstance();
+		return simpleFormat;
+	}
+	
+	private static NumberFormat getThreeDecimalFormat() {
+		NumberFormat tdf = NumberFormat.getInstance();
+		tdf.setMinimumFractionDigits(1);
+		tdf.setMaximumFractionDigits(1);
+		tdf.setMaximumFractionDigits(3);
+		tdf.setMinimumFractionDigits(1);
+		return tdf;
+	}
+}

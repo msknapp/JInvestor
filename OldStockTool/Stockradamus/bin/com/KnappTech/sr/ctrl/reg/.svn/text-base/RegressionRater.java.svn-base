@@ -1,0 +1,168 @@
+package com.kt.sr.ctrl.reg;
+
+import java.util.ArrayList;
+
+import org.apache.commons.math.linear.SingularMatrixException;
+
+import com.kt.model.LiteDate;
+import com.kt.sr.model.Regressable.Record;
+import com.kt.sr.model.Regressable.RecordList;
+import com.kt.sr.model.Regressable.RecordSet;
+import com.kt.sr.model.comp.Indicator;
+import com.kt.sr.model.comp.RegressionResult;
+import com.kt.sr.model.constants.RegressionMethod;
+import com.kt.util.KTTimer;
+import com.kt.util.MultipleDataPoints;
+
+public class RegressionRater {
+	
+	/**
+	 * The data that we are trying to predict
+	 */
+	private RecordList<? extends Record> predictionTarget = null;
+	private RecordSet<? extends RecordList<? extends Record>> predictingRecords = null;
+	private double rating = 0;
+	private String weakestID = null;
+	private RegressionMethod regressionMethod = null;
+	private RegressionResult results = null;
+	private double variance = 0;
+	private double[] standardErrors = null;
+	private double r2 = 0;
+	private MultipleDataPoints mdp = null;
+	
+	/**
+	 * Tells the rater
+	 * @param interest what recordlist you are trying to predict.
+	 * @param indicators what record lists might help predict it.
+	 */
+	public RegressionRater(RecordList<? extends Record> interest, 
+			RecordSet<? extends RecordList<? extends Record>> indicators) {
+		this.predictionTarget = interest;
+		if (indicators.size()>16) {
+			System.err.println("Using far too many record lists to make a prediction.");
+		}
+		this.setIndicators(indicators);
+	}
+
+	public void evaluate() throws SingularMatrixException {
+		if (mdp.lengthY()>200) {
+        	try {
+        		KTTimer timer2 = new KTTimer("performing regression",5,"taking very long to perform the regression...",false);
+	        	variance = mdp.getVariance();
+	        	timer2.stop();
+	        	standardErrors = mdp.getErrors();
+	        	
+	        	// determine R2:
+	        	r2 = mdp.getCoeffOfDetermination();
+	        	
+	            // determine the score: (this may change over time)
+	        	if (regressionMethod==null) {regressionMethod = RegressionMethod.COEFFOFDET; }
+	            rating =  regressionMethod.getRating(variance, standardErrors,r2);
+	            
+	            // Find the weakest link:
+	            weakestID = mdp.getIDofLargestError();
+        	} catch (Exception e) {
+        		if (e instanceof SingularMatrixException) {
+        			RecordList<? extends Record> redundantIndicator = 
+        				predictingRecords.checkForSingularMatrix();
+        			if (redundantIndicator!=null) {
+        				weakestID = redundantIndicator.getID();
+        			} else {
+        				
+        			}
+        			SingularMatrixException sme = (SingularMatrixException)e;
+        			throw sme;
+        		} else {
+	        		System.err.format("Exception caught while doing a regression (RegressionRater), %s%n", e.getMessage());
+	        		e.printStackTrace();
+        		}
+        	}
+		} else { // force the indicator to be removed from the set.
+			rating = -(Double.MAX_VALUE/10);
+			RecordList<? extends Record> weakestIndicator = predictingRecords.getSmallestRecord();
+			weakestID = weakestIndicator.getID();
+		}
+	}
+	
+	private RegressionResult createResults() {
+		results = new RegressionResult();
+		ArrayList<Indicator> indicators = new ArrayList<Indicator>();
+		for (int i=0;i<mdp.numberOfInputs();i++) {
+			String id = mdp.getxID(i);
+			double factor = mdp.getFactor(id);
+			double error = mdp.getError(id);
+			double lastValue = mdp.getLastValue(id);
+			Indicator indicator = Indicator.create(id, factor, error, (byte)0);
+			indicator.setLastValue(lastValue);
+			indicators.add(indicator);
+		}
+        results.setIndicators(indicators);
+        results.setRegressionMethod(regressionMethod);
+        results.setCreationDate(LiteDate.getOrCreate());
+        results.setRegressandVariance(mdp.getVariance());
+        results.setCoefficientOfDetermination(mdp.getCoeffOfDetermination());
+        results.updateEstimate();
+        
+		return results;
+		
+		// OLD METHOD:
+		
+//		double[] factors = null;
+//		if (predictingRecords!=null && !predictingRecords.isEmpty() && mdp!=null) {
+//	        factors = mdp.getFactors();
+//	        ArrayList<Indicator> indictrs = predictingRecords.getIndicators(factors, standardErrors);
+//	        results.setIndicators(indictrs);
+//	        results.setRegressionMethod(regressionMethod);
+//	        results.setCreationDate(new LiteDate());
+//	        results.setRegressandVariance(variance);
+//	        results.setCoefficientOfDetermination(r2);
+//	        results.updateEstimate();
+//			return results;
+//		} else {
+//			System.err.println("Warning: either the indicators or the regression were null/empty when trying to " +
+//					"create the regression results. (10583925)");
+//		}
+//		return null;
+	}
+	
+	public double getRating() {
+		return rating;
+	}
+	
+	public String getWeakestID() {
+		return weakestID;
+	}
+
+	public void setRegressionMethod(RegressionMethod regressionMethod) {
+		this.regressionMethod = regressionMethod;
+	}
+
+	public RegressionMethod getRegressionMethod() {
+		return regressionMethod;
+	}
+
+	public RegressionResult getResults() {
+		createResults();
+		return results;
+	}
+	
+	@SuppressWarnings("unused")
+	private void setResults(RegressionResult results) {
+		this.results = results;
+	}
+	
+	public void setIndicators(
+			RecordSet<? extends RecordList<? extends Record>> indicators) {
+		this.predictingRecords=indicators;
+		mdp = predictingRecords.getMultipleDataPoints(predictionTarget);
+	}
+	
+	public RecordSet<? extends RecordList<? extends Record>>
+			getIndicators() {
+		return predictingRecords;
+	}
+	
+	public MultipleDataPoints getMDP() {
+		return mdp;
+	}
+}

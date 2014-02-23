@@ -1,0 +1,36 @@
+package com.kt.sr.model.beans;
+
+import java.io.Serializable;
+
+import com.kt.sr.model.Financial.FinancialEntry;
+
+public class FEBean implements Serializable {
+	private static final long serialVersionUID = 201102052249L;
+	private short index;
+	private Double[] values = null;
+	
+	public FEBean() {
+		
+	}
+	
+	public FEBean(FinancialEntry fe) {
+		this.setIndex(fe.getIndex());
+		setValues(fe.getValues());
+	}
+
+	public void setIndex(short index) {
+		this.index = index;
+	}
+
+	public short getIndex() {
+		return index;
+	}
+
+	public void setValues(Double[] values) {
+		this.values = values;
+	}
+
+	public Double[] getValues() {
+		return values;
+	}
+}

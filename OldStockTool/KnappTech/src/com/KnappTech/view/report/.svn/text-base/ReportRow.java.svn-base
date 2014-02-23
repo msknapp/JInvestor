@@ -1,0 +1,121 @@
+package com.kt.view.report;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+
+import com.kt.view.report.ReportSettings;
+
+public class ReportRow extends ArrayList<ReportCell> implements Comparable<ReportRow> {
+	private static final long serialVersionUID = 1L;
+
+	public ReportRow(ArrayList<ReportCell> reportRow) {
+		super(reportRow);
+	}
+
+	public ReportRow() {
+	}
+	
+	public ReportCell getCell(String attributeName) {
+		for (ReportCell cell : this) {
+			if (cell.getAttributeName().equalsIgnoreCase(attributeName)) {
+				return cell;
+			}
+		}
+		return null;
+	}
+
+	public String getCellValue(String attributeName) {
+		ReportCell cell = getCell(attributeName);
+		if (cell!=null) {
+			return cell.getValue();
+		} else {
+			return "^unknown";
+		}
+	}
+	
+	public double getCellNumberValue(String attributeName) {
+		String val = getCellValue(attributeName);
+		double dbl = 0;
+		try {
+			dbl = Double.parseDouble(val);
+		} catch (Exception e) {
+			dbl = Double.MAX_VALUE;
+		}
+		return dbl;
+	}
+	
+	@Override
+	public int compareTo(ReportRow arg0) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+	
+	public String toHTMLRow(ReportSettings settings) {
+		String htmlRow = "<tr class=\"row\">";
+		ReportCell cell = null;
+		for (String header : settings.getColumns()) {
+			cell = getCell(header);
+			if (cell!=null) {
+				htmlRow+=cell.toHTMLCell();
+			} else {
+				htmlRow+=ReportCell.toEmptyHTMLCell(header);
+			}
+		}
+		htmlRow+="</tr>\n";
+		return htmlRow;
+	}
+
+	public Object toCSVRow(ReportSettings settings) {
+		String csvRow = "";
+		ReportCell cell = null;
+		for (String header : settings.getColumns()) {
+			cell = getCell(header);
+			if (cell!=null) {
+				csvRow+=cell.toCSVCell();
+			} else {
+				csvRow+=ReportCell.toEmptyCSVCell();
+			}
+		}
+		return csvRow+"\n";
+	}
+	
+	public void orderRow(ReportSettings settings) {
+		// remove the cells that don't belong:
+		for (int i = 0;i<size();i++) {
+			ReportCell cell = get(i);
+			if (!settings.getColumns().contains(cell.getAttributeName().toLowerCase())) {
+				remove(cell);
+			}
+		}
+		CellComparator comp = new CellComparator();
+		ArrayList<String> columnHeadings = new ArrayList<String>(settings.getColumns());
+		comp.setColumnHeadings(columnHeadings);
+		Collections.sort(this,comp);
+	}
+	
+	public class CellComparator implements Comparator<ReportCell> {
+		private ArrayList<String> columnHeadings = null;
+
+		@Override
+		public int compare(ReportCell firstCell, ReportCell secondCell) {
+			int firstCellIndex = columnHeadings.indexOf(firstCell.getAttributeName());
+			int secondCellIndex = columnHeadings.indexOf(secondCell.getAttributeName());
+			int diff = firstCellIndex-secondCellIndex;
+			return diff;
+		}
+
+		public void setColumnHeadings(ArrayList<String> columnHeadings) {
+			this.columnHeadings = columnHeadings;
+		}
+	}
+
+	@Override
+	public String toString() {
+		String representation = "";
+		for (ReportCell cell : this) {
+			representation+=cell.toString()+", ";
+		}
+		return representation;
+	}
+}

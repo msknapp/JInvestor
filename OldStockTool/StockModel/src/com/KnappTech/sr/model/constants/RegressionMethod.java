@@ -1,0 +1,100 @@
+package com.KnappTech.sr.model.constants;
+
+import java.util.Calendar;
+
+import com.KnappTech.model.LiteDate;
+
+public enum RegressionMethod {
+	AGGRESSIVE (LiteDate.getOrCreate(1996,(byte)Calendar.JANUARY,(byte)1),LiteDate.getOrCreate(Calendar.MONTH,-1),false),
+	VARIANCEONLY (LiteDate.getOrCreate(1996,(byte)Calendar.JANUARY,(byte)1),LiteDate.getOrCreate(Calendar.MONTH,-1),false),
+	COEFFOFDET (LiteDate.getOrCreate(1996,(byte)Calendar.JANUARY,(byte)1),LiteDate.getOrCreate(Calendar.MONTH,-1),true);
+
+    private LiteDate startDate;
+	private LiteDate endDate;
+	private boolean higherScoresAreBetter = false;
+
+	private RegressionMethod(LiteDate startDate, LiteDate endDate,boolean higherScoresAreBetter) {
+    	this.startDate = startDate;
+    	this.endDate = endDate;
+    	this.higherScoresAreBetter = higherScoresAreBetter;
+    }
+    
+    public LiteDate getStartDate() {
+		return startDate;
+	}
+    
+    public LiteDate getEndDate() {
+		return endDate;
+	}
+	
+	public byte getIndex() {
+		if (this == AGGRESSIVE) {return 1;}
+		if (this == VARIANCEONLY) {return 2;}
+		if (this == COEFFOFDET) {return 3;}
+		return -1;
+	}
+	
+	public static RegressionMethod getFromIndex(byte ind) {
+		if (ind==1) {return AGGRESSIVE; }
+		if (ind==2) {return VARIANCEONLY; }
+		if (ind==3) {return COEFFOFDET; }
+		return null;
+	}
+	
+    public double getRating(double variance, double[] standardErrors,double r2){
+//		int numberOfPoints = standardErrors.length;
+    	if (variance>0 && standardErrors.length>0 && r2>=0 && r2<=1) {
+    		if (this == AGGRESSIVE) {
+		    	double standardDeviation = Math.pow(variance, 0.5); // we want this to decrease
+		    	double totalStandardError = 0;
+		    	for (int i = 0;i<standardErrors.length;i++){
+		    		totalStandardError += standardErrors[i];
+		    	}
+		    	double averageStandardError = totalStandardError/(standardErrors.length); // we want this to decrease
+		    	double rating = 1/(standardDeviation*averageStandardError);
+		    	return rating;
+    		} else if (this == COEFFOFDET) {
+        		return 1000*r2;
+        	} else if (this == VARIANCEONLY) {
+    			return 10/variance;
+    		} else {
+    			return 10/variance;
+    		}
+    	} else {
+    		System.err.println("Warning: Given invalid input for making a rating.");
+    		return Double.MIN_VALUE;
+    	}
+    }
+    
+    public boolean isFirstScoreBetter(double firstScore, double secondScore) {
+    	if (higherScoresAreBetter) {
+    		return (firstScore>secondScore);
+    	} else {
+    		return (firstScore<secondScore);
+    	}
+    }
+    
+    public boolean isFirstScoreWorse(double firstScore, double secondScore) {
+    	if (higherScoresAreBetter) {
+    		return (firstScore<secondScore);
+    	} else {
+    		return (firstScore>secondScore);
+    	}
+    }
+    
+    public double getTheBetterScore(double firstScore, double secondScore) {
+    	if (higherScoresAreBetter) {
+    		return Math.max(firstScore, secondScore);
+    	} else {
+    		return Math.min(firstScore, secondScore);
+    	}
+    }
+
+	public double getWorstPossibleRating() {
+    	if (higherScoresAreBetter) {
+    		return -Double.MAX_VALUE;
+    	} else {
+    		return Double.MAX_VALUE;
+    	}
+	}
+}

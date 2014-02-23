@@ -1,0 +1,24 @@
+package com.kt.sr.ctrl;
+
+import com.kt.sr.model.PropertyManager;
+import com.kt.sr.view.MainDisplay;
+
+/**
+ * This class will always be the default starter for the 
+ * application.
+ * @author Michael Knapp
+ */
+public class StartManager {
+	
+	
+	/**
+	 * Starts the entire application and lends the user options.
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		if (PropertyManager.automaticallyStartUpdates()) {
+			ChielfOperationsOfficer.main(null);
+		}
+		MainDisplay.start();
+	}
+}

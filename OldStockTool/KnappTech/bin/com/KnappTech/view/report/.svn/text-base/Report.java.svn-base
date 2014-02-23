@@ -1,0 +1,176 @@
+package com.kt.view.report;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+
+import com.kt.view.report.ReportSettings;
+//import com.kt.sr.model.PropertyManager;
+import com.kt.util.FileUtil;
+import com.kt.util.PersistenceHelper;
+import com.kt.util.PropertyManager;
+
+public class Report extends ArrayList<ReportRow> {
+	private static final long serialVersionUID = 201003252019L;
+	private ReportSettings settings = null;
+	private String reportName = "Report";
+	
+	public Report(ReportSettings settings) {
+		this.settings = settings;
+	}
+	
+	public Report(ArrayList<ReportRow> rows,ReportSettings settings) {
+		super(rows);
+		this.settings = settings;
+	}
+	
+	public void order() {
+		for (int i = 0;i<size();i++) {
+			ReportRow row = get(i);
+			row.orderRow(settings);
+		}
+		RowComparator comp = new RowComparator();
+		comp.setAttributeName(settings.sortRowsByAttributeName);
+		comp.setSortAsNumber(settings.sortRowsByNumber);
+		comp.setAscending(settings.ascending);
+		Collections.sort(this,comp);
+	}
+	
+	public String toCSVTable() {
+		StringBuilder csvTable = new StringBuilder();
+		csvTable.append(settings.getColumnsCSV());
+		for (ReportRow row : this) {
+			csvTable.append(row.toCSVRow(settings));
+		}
+		return csvTable.toString();
+	}
+	
+	public String toHTMLTable() {
+		StringBuilder htmlTable = new StringBuilder("<table>\n");
+		htmlTable.append(settings.getColumnsHTML());
+		int rowNumber = 0;
+		for (ReportRow row : this) {
+			htmlTable.append(row.toHTMLRow(settings));
+			rowNumber++;
+			if (rowNumber>=settings.maxRows && settings.maxRows>0) {
+				break;
+			}
+		}
+		htmlTable.append("</table>\n");
+		return htmlTable.toString();
+	}
+	
+	public String toHTMLPage() {
+		String fullPath = PropertyManager.getReportTemplatePath();
+		StringBuilder page = new StringBuilder(PersistenceHelper.loadStringFromFile(fullPath));
+		String replacemeText = "</InsertReportTable>";
+		int ind1 = page.indexOf(replacemeText);
+		int ind2 = ind1+replacemeText.length();
+		page.replace(ind1, ind2, toHTMLTable());
+		String htmlPage = page.toString();
+		return htmlPage;
+	}
+	
+	public void display() {
+		// first get the html text
+		String html = toHTMLPage();
+		
+		// Now save it to a file.
+		String dateFormat = "MM-dd-yyyy_hhmmss";
+		SimpleDateFormat df = new SimpleDateFormat(dateFormat);
+		String dateString = df.format(new Date());
+		String fileName = File.separator+"Report_"+dateString+".html";
+		String fullPath = PropertyManager.getReportDirectoryPath()+fileName;
+		PersistenceHelper.saveStringToFile(html, fullPath);
+		
+		// Then call a browser command to display the page in a new tab.
+		String firefoxPath = "file:///"+fullPath;
+		String command = PropertyManager.getFirefoxCommand()+" \""+firefoxPath+"\"";
+		System.out.println("Skipping command: "+command);
+//		try {
+//			Runtime.getRuntime().exec(command);
+//		} catch (IOException e) {
+//			System.err.format("Unable to run the command: %s,%n   file: %s%n", command,fullPath);
+//		}
+	}
+	
+	@Override
+	public String toString() {
+		String representation = "";
+		for (ReportRow row : this) {
+			representation+=row.toString()+"\n";
+		}
+		return representation;
+	}
+
+	public ReportSettings getSettings() {
+		return settings;
+	}
+	
+	public void produceCSV() {
+		produceCSV(reportName);
+	}
+	
+	public void produceCSV(String reportName) {
+		String csvText = this.toCSVTable();
+		String dateString = PropertyManager.getDateStringForFiles();
+		String fullPath = PropertyManager.getReportOutputDirectory()+
+			File.separator+reportName+"_"+dateString+".csv";
+		FileUtil.writeStringToFile(fullPath, csvText);
+	}
+	
+	public void setReportName(String reportName) {
+		this.reportName = reportName;
+	}
+
+	public String getReportName() {
+		return reportName;
+	}
+
+	public class RowComparator implements Comparator<ReportRow> {
+		private String attributeName = "";
+		private boolean sortAsNumber = false;
+		private boolean ascending = true;
+		
+		@Override
+		public int compare(ReportRow firstRow, ReportRow secondRow) {
+			int diff = 0;
+			if (sortAsNumber) {
+				double firstVal = firstRow.getCellNumberValue(attributeName);
+				double secondVal = secondRow.getCellNumberValue(attributeName);
+				diff = (int) Math.round(firstVal-secondVal);
+			} else {
+				String firstStr = firstRow.getCellValue(attributeName);
+				String secondStr = secondRow.getCellValue(attributeName);
+				diff = firstStr.compareTo(secondStr);
+			}
+			if (!ascending) diff = -diff;
+			return diff;
+		}
+
+		public void setAttributeName(String attributeName) {
+			this.attributeName = attributeName;
+		}
+
+		public void setSortAsNumber(boolean sortAsNumber) {
+			this.sortAsNumber = sortAsNumber;
+		}
+		
+
+		public void setAscending(boolean ascending) {
+			this.ascending = ascending;
+		}
+	}
+
+	public void keepBest(int i) {
+		order();
+		if (size()>i) {
+			Collection<ReportRow> c = subList(0, i);
+			retainAll(c);
+		}
+	}
+}

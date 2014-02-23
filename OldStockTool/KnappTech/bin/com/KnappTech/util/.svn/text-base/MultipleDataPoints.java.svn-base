@@ -1,0 +1,278 @@
+package com.kt.util;
+
+import org.apache.commons.math.stat.regression.OLSMultipleLinearRegression;
+
+/**
+ * A grouping of data points where there is one list of y points,
+ * and multiple lists of x points.  The length of x (not x[]) must
+ * equal the length of y.  The length of x[] is equal to the number
+ * of x input variables there are.
+ * @author Michael Knapp
+ *
+ */
+public class MultipleDataPoints {
+	private double[][] x = null;
+	private double[] y = null;
+	private String yID = "";
+	private String[] xID = null;
+	
+	private OLSMultipleLinearRegression reg = new OLSMultipleLinearRegression();
+	private double[] errors = null;
+	private double[] factors = null;
+	private double variance = -1;
+	private double stdev = -1;
+	
+	public MultipleDataPoints(double[][] x, double[] y) {
+		if (x.length!=y.length) {
+			System.err.println("Created invalid data points.");
+		}
+		this.x = x;
+		this.y = y;
+		reg.newSampleData(y, x);
+	}
+	
+	public String toString() {
+		String s = "Y:";
+		
+		if (x.length<1 || y.length<1) {
+			return "I am empty";
+		}
+		if (x.length>5 && y.length>5) {
+			int z = x[0].length;
+			for (int i = 0;i<z;i++) {
+				s+="\tX"+i;
+			}
+			s+="\n";
+			for (int i = 0;i<2;i++) {
+				s+=y[i]+"\t";
+				for (int j = 0;j<z;j++) {
+					s+=x[i][j]+"\t";
+				}
+				s+="\n";
+			}
+			for (int i = y.length-2;i<y.length;i++) {
+				s+=y[i]+"\t";
+				for (int j = 0;j<z;j++) {
+					s+=x[i][j]+"\t";
+				}
+				s+="\n";
+			}
+		} else {
+			int z = x[0].length;
+			for (int i = 0;i<z;i++) {
+				s+="\tX"+i;
+			}
+			s+="\n";
+			for (int i = 0;i<y.length;i++) {
+				s+=y[i]+"\t";
+				for (int j = 0;j<z;j++) {
+					s+=x[i][j]+"\t";
+				}
+				s+="\n";
+			}
+		}
+		return s;
+	}
+	
+//	public OLSMultipleLinearRegression getReg() {
+//		return reg;
+//	}
+	
+	public double getVariance() {
+		if (variance<0) {
+			variance = reg.estimateRegressandVariance();
+		}
+		return variance;
+	}
+	
+	public double getStDev() {
+		if (stdev<0) {
+			stdev = Math.pow(getVariance(),0.5);
+		}
+		return stdev;
+	}
+	
+	public double[] getErrors() {
+		if (errors==null) {
+			errors = reg.estimateRegressionParametersStandardErrors();
+		}
+		return errors;
+	}
+	
+	/**
+	 * Gets the error of the item at the index provided.
+	 * @param index
+	 * @return
+	 */
+	public double getError(int index) {
+		return getErrors()[index];
+	}
+	
+	public double getError(String id) {
+		if (xID!=null && xID.length==x[0].length) {
+			int i = getIndex(id);
+			return getErrors()[i];
+		} else {
+			System.err.println("Tried getting error of an id, but the ids have " +
+					"not been defined for these multiple data points.");
+		}
+		return -1;
+	}
+	
+	public double getCoeffOfDetermination() {
+		double[] res = reg.estimateResiduals();
+		double sumSqRes = 0;
+		for (int i = 0;i<res.length;i++) {
+			sumSqRes += Math.pow(res[i], 2);
+		}
+		double sumSqY = 0;
+		double avg = averageY();
+		for (int i = 0;i<y.length;i++) {
+			sumSqY += Math.pow((y[i]-avg), 2);
+		}
+		double r2 = 1-(sumSqRes/sumSqY);
+		return r2;
+	}
+	
+	public double averageY() {
+		double sum = 0;
+		for (int i = 0;i<y.length;i++) {
+			sum+=y[i];
+		}
+		if (y.length>0) {
+			return sum/y.length;
+		}
+		return 0;
+	}
+
+	public int lengthY() {
+		return y.length;
+	}
+
+	public void setyID(String yID) {
+		if (yID!=null && yID.length()>0) {
+			this.yID = yID;
+		} else {
+			System.err.println("Tried setting y id to an empty/null string.");
+		}
+	}
+
+	public String getyID() {
+		return yID;
+	}
+
+	public void setxID(String[] xID) {
+		if (xID.length==numberOfInputs()) {
+			this.xID = xID;
+		} else {
+			System.err.println("Tried setting the x ids with the wrong size!");
+		}
+	}
+
+	public String[] getxID() {
+		return xID;
+	}
+
+	public String getxID(int i) {
+		if (i>=0 && i<xID.length) {
+			return xID[i];
+		}
+		return null;
+	}
+	
+	public String getIDofLargestError() {
+		if (xID!=null && xID.length==numberOfInputs()) {
+			double maxError = -1;
+			String maxErrorID = null;
+			for (int i = 0;i<numberOfInputs();i++) {
+				double err = getError(i);
+				if (err>maxError) {
+					maxError = err;
+					maxErrorID = getxID(i);
+				}
+			}
+			return maxErrorID;
+		} else {
+			System.err.println("Tried finding id of largest error, but "+
+					"the input ids have not been set.");
+		}
+		return null;
+	}
+
+	public int getIndex(String id) {
+		for (int i = 0;i<xID.length;i++) {
+			String xid = xID[i];
+			if (xid.equals(id)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	
+	public int size() {
+		return y.length;
+	}
+	
+	public int numberOfInputs() {
+		return x[0].length;
+	}
+
+	public double[] getFactors() {
+		if (factors==null) {
+			factors = reg.estimateRegressionParameters();
+		}
+		return factors;
+	}
+	
+	public double getFactor(String id) {
+		int index = getIndex(id);
+		return getFactors()[index];
+	}
+	
+	public double estimateLastValue() {
+		double[] factors = getFactors();
+		double[] lastValues = getLastValues();
+		double sum = 0;
+		for (int i = 0;i<numberOfInputs();i++) {
+			sum+=factors[i]*lastValues[i];
+		}
+		return sum;
+	}
+
+	private double[] getLastValues() {
+		double[] lastValues = new double[numberOfInputs()];
+		for (int i = 0;i<numberOfInputs();i++) {
+			lastValues[i] = x[size()-1][i];
+		}
+		return lastValues;
+	}
+	
+	public double getLastValue(String id) {
+		int index = getIndex(id);
+		return getLastValues()[index];
+	}
+	
+	public String getLastValuesDebugString() {
+		String s = "";
+		for (String id : getxID()) {
+			s+=id+": "+getLastValue(id)+",\n";
+		}
+		return s;
+	}
+	
+	public String seeMath() {
+		String s = "";
+		double sum = 0;
+		for (int i = 0;i<numberOfInputs();i++) {
+			String id = getxID(i);
+			double factor = getFactor(id);
+			double lastValue = getLastValue(id);
+			double product = factor*lastValue;
+			sum+=product;
+			s+=id+": last value="+lastValue+", factor="+
+				factor+", product="+product+", sum="+
+				sum+"\n";
+		}
+		return s;
+	}
+}

@@ -1,0 +1,50 @@
+Operating Revenue
+Total Revenue
+Adjustment to Revenue
+Cost of Sales
+Cost of Sales with Depreciation
+Gross Margin
+Gross Operating Profit
+R&amp;D
+SG&amp;A
+Advertising
+Operating Profit
+Operating Profit before Depreciation (EBITDA)
+Depreciation
+Depreciation Unreconciled
+Amortization
+Amortization of Intangibles
+Operating Income After Depreciation
+Interest Income
+Earnings from Equity Interest
+Other Income, Net
+Total Income Avail for Interest Expense (EBIT)
+Interest Expense
+Income Before Tax (EBT)
+Income Taxes
+Minority Interest
+Net Income from Continuing Operations
+Net Income from Discontinued Ops.
+Net Income from Total Operations
+Extraordinary Income/Losses
+Total Net Income
+Normalized Income
+Net Income Available for Common
+Preferred Dividends
+Excise Taxes
+Basic EPS from Continuing Ops.
+Basic EPS from Discontinued Ops.
+Basic EPS from Total Operations
+Basic EPS from Extraordinary Inc.
+Basic EPS from Cum Effect of Accounting Chg
+Basic EPS from Other Gains (Losses)
+Basic EPS Total
+Basic Normalized Net Income/Share
+Diluted EPS from Continuing Ops.
+Diluted EPS from Discontinued Ops.
+Diluted EPS from Total Operations
+Diluted EPS Total
+Diluted Normalized Net Income/Share
+Dividends Paid per Share
+Basic Weighted Shares Outstanding
+Diluted Weighted Shares Outstanding

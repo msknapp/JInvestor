@@ -1,0 +1,178 @@
+package com.kt.sr.ctrl.parse;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.Scanner;
+
+import com.kt.model.LiteDate;
+import com.kt.sr.model.constants.SourceAgency;
+import com.kt.util.ConnectionCreater;
+import com.kt.util.DefaultConnectionCreater;
+
+public class SLFParser extends ERParser {
+	public static final String SAINTLOUISFEDAPIKEY = "0fdc21ba8efcfea5c5416f3fabad4f9e";
+	public static final String DATEFORMATSTRING = "yyyy-MM-dd";
+	public static final SimpleDateFormat DATEFORMAT = new SimpleDateFormat(DATEFORMATSTRING);
+	public static final String startString = "VALUE";
+	// Example: 42.491988-06-30
+	
+	protected String createURL() {
+		String seriesID = record.getID();
+		String url = "http://research.stlouisfed.org/fred2/data/"+seriesID+".txt";
+		return url;
+	}
+
+	@Override
+	public SourceAgency getSourceAgency() {
+		return SourceAgency.SLF;
+	}
+	
+	@Override
+	protected boolean isConstantURL() {
+		return false;
+	}
+
+	@Override
+	protected void updateER() throws InterruptedException {
+		Scanner dataScanner;
+		String relevantData;
+		LiteDate entryDate = null;
+		double entryValue = 0;
+		String dataScannerOutput;
+		LiteDate followingEntryDate = null;
+		LiteDate minDate = LiteDate.getOrCreate(1988,0,1);
+		
+		// abridge the data to what is relevant:
+		int ind = data.indexOf(startString)+startString.length();
+		relevantData = data.substring(ind);
+		dataScanner = new Scanner(relevantData);
+		
+		// Get the start date:
+		LiteDate startDate = null;
+		try {
+			startDate = getStartDate(dataScanner);
+		} catch (IllegalArgumentException e) {
+			startDate = LiteDate.EPOCH;
+		}
+		dataScannerOutput = dataScanner.next();
+		entryValue = getValueHalf(dataScannerOutput);
+		try {
+			followingEntryDate = getDateHalf(dataScannerOutput);
+		}  catch (IllegalArgumentException e) {
+			followingEntryDate = LiteDate.EPOCH;
+		}
+		if (startDate.after(minDate))
+			record.addOrReplace(startDate,entryValue);
+
+		if (Thread.interrupted()) {
+			throw new InterruptedException();
+		}
+		
+		// loop through and add all of the values:
+		while (dataScanner.hasNext() && followingEntryDate!=null) {
+			entryDate = followingEntryDate;
+			dataScannerOutput = dataScanner.next();
+			try {
+				followingEntryDate = getDateHalf(dataScannerOutput);
+				if (entryDate.after(minDate)) {
+					entryValue = getValueHalf(dataScannerOutput);
+					// CODE CUT...
+					record.addOrReplace(entryDate,entryValue);
+				}
+			} catch (IllegalArgumentException e) {
+				// do nothing, do not report it.
+			}
+			if (Thread.interrupted()) {
+				throw new InterruptedException();
+			}
+		}
+	}
+	
+	private LiteDate getStartDate(Scanner dataScanner) {
+		Date startDateDate = null;
+		String startDateString = dataScanner.next();
+		try {
+			startDateDate = DATEFORMAT.parse(startDateString);
+		} catch (ParseException e) {
+			defaultExceptionHandler(e);
+		}
+		GregorianCalendar cal = new GregorianCalendar();
+		cal.setTime(startDateDate);
+		return LiteDate.getOrCreate(cal);
+	}
+	
+	private void defaultExceptionHandler(Exception e) {
+		System.err.format("An exception was thrown by thread %s, in class %s, method %s%n" +
+				"   type: %s, message: %s%n" +
+				"   ", Thread.currentThread().getName(),getClass(),
+				Thread.currentThread().getStackTrace()[2].getMethodName(),
+				e.getClass(),e.getMessage());
+	}
+	
+	private LiteDate getDateHalf(String dataScannerOutput){
+		LiteDate tdate = null;
+		int beginIndex = dataScannerOutput.length()-DATEFORMATSTRING.length();
+		if (beginIndex>0){
+			String dateString = dataScannerOutput.substring(beginIndex);
+			Date date;
+			try {
+				date = DATEFORMAT.parse(dateString);
+				GregorianCalendar calendar = new GregorianCalendar();
+				calendar.setTime(date);
+				tdate = LiteDate.getOrCreate(calendar);
+			} catch (ParseException e) {
+				defaultExceptionHandler(e);
+			}
+		}
+		return tdate;
+	}
+
+	private double getValueHalf(String dataScannerOutput){
+		String stringValue = dataScannerOutput;
+		String everythingAfterNegativeSign = dataScannerOutput.substring(1);
+		if (everythingAfterNegativeSign.contains("-")) {
+			int endIndex = dataScannerOutput.length()-DATEFORMATSTRING.length();
+			if (endIndex>0){
+				stringValue = dataScannerOutput.substring(0, endIndex);
+			}
+		}
+		if (stringValue.equals(".")) {
+			return Double.MIN_VALUE;
+		}
+		try {
+			double value = Double.parseDouble(stringValue);
+			return value;
+		} catch (NumberFormatException e) {
+			System.err.println("Number format exception thrown while trying to determine the value in SLF record history.");
+		}
+		System.err.println("value of entry was missing!");
+		return Double.MIN_VALUE;
+	}
+
+	@Override
+	protected ConnectionCreater getConnectionCreater() {
+		String url = createURL();
+		return DefaultConnectionCreater.create(url);
+	}
+
+//	if (followingEntryDate!=null) { // check that the frequency has not changed.
+//		recordsUpdateFrequency = UpdateFrequency.estimate(entryDate, followingEntryDate);
+//		if (recordsUpdateFrequency!=record.getUpdateFrequency()) {
+//			// You can switch when it is reported more often, 
+//			// but you can never switch if it is reported less often!
+//			// that would result in a loss of data.
+//			if (recordsUpdateFrequency.getApproximateDelta()<record.getUpdateFrequency().getApproximateDelta()) {
+//				if (record.size()>0 && numberOfTimesFrequencySwitched>1) {
+//					numberOfTimesFrequencySwitched++;
+//					System.err.format("Warning: the update frequency has changed for a record that already has data: %s,%n" +
+//						"original update frequency: %s, new: %s%n, size: %d, switched: %d times.%n",
+//						record.getID(),record.getUpdateFrequency().name(),recordsUpdateFrequency.name(),
+//						record.size(),numberOfTimesFrequencySwitched);
+//				}
+//				record.adjustToFrequency(recordsUpdateFrequency);
+//			}
+//		}
+//	}
+}

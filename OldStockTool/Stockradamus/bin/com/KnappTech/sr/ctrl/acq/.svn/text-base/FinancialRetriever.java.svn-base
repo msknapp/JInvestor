@@ -1,0 +1,120 @@
+package com.kt.sr.ctrl.acq;
+
+import java.util.Collection;
+
+import com.kt.sr.ctrl.parse.FinancialParser;
+import com.kt.sr.model.PropertyManager;
+import com.kt.sr.model.Financial.FinancialHistories;
+import com.kt.sr.model.Financial.FinancialHistory;
+import com.kt.sr.model.comp.Companies;
+import com.kt.sr.persistence.CompanyManager;
+import com.kt.sr.persistence.FinancialEntryTypesManager;
+import com.kt.sr.persistence.FinancialHistoryManager;
+import com.kt.util.KTTimer;
+
+public class FinancialRetriever {
+	private static final char startChar = 'A';
+	private static final char endChar = 'Z';
+	
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		runForMasses();
+	}
+	
+	@SuppressWarnings("unused")
+	private static void runForPortfolio() {
+		Collection<String> portfolioTickers = PropertyManager.loadPortfolioTickers();
+		CompanyManager.clear();
+		FinancialHistoryManager.clear();
+		Companies companies = null;
+		try {
+			companies = CompanyManager.getAllThatAreStored(portfolioTickers);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		FinancialHistories financials = null;
+		try {
+			financials = FinancialHistoryManager.getAllThatAreStored(portfolioTickers);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		System.out.println("FYI: finished loading all companies and financials.");
+		
+		for (String name : companies.getIDs()) {
+			if (!financials.has(name)) {
+				FinancialHistory financial = FinancialHistory.create(name);
+				financials.add(financial);
+			}
+		}
+		financials.updateAll();
+	}
+	
+	private static void runForMasses() {
+		FinancialEntryTypesManager.Load();
+		int i = 0;
+		for (i=(int)startChar;i<=(int)endChar;i++) {
+			try {
+				runForLetter((char)i);
+			} catch (Exception e) {
+				System.err.println("Warning: exception caught while running " +
+						"financial retriever for letter "+(char)i);
+			}
+		}
+		System.out.println("Finished running for all letters!");
+	}
+	
+	private static void runForLetter(char letter) {
+		CompanyManager.clear();
+		FinancialHistoryManager.clear();
+		Companies companies = null;
+		try {
+			companies = CompanyManager.getEverythingStored(letter);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		FinancialHistories financials = null;
+		try {
+			financials = FinancialHistoryManager.getEverythingStored(letter);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		System.out.println("FYI: finished loading all companies and financials.");
+		
+		for (String name : companies.getIDs()) {
+			if (!financials.has(name)) {
+				FinancialHistory financial = FinancialHistory.create(name);
+				financials.add(financial);
+			}
+		}
+		financials.update();
+		System.out.println("Finished running for letter "+letter);
+	}
+	
+	public static class MyRunner implements Runnable {
+		private FinancialHistory financial = null;
+		private FinancialParser fp = null;
+		
+		public MyRunner(FinancialHistory financial,FinancialParser fp) {
+			this.financial = financial;
+			this.fp = fp;
+		}
+
+		@Override
+		public void run() {
+			try {
+				String msg = "taking too long to retrieve financial data for "+financial.getID();
+				KTTimer escapeTimer = new KTTimer("Escape Financial Retrieval", 8, msg, true);
+				System.out.println("Now working on financials for company: "
+						+financial.getID());
+				fp.update(financial);
+				FinancialHistoryManager.save(financial,true);
+				FinancialEntryTypesManager.Save();
+				escapeTimer.stop();
+			} catch (Exception e) {
+				System.err.println("Exception caught.");
+			}
+		}
+	}
+}

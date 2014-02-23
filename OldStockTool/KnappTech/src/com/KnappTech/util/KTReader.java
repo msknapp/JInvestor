@@ -1,0 +1,561 @@
+package com.KnappTech.util;
+
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+public class KTReader extends BufferedInputStream {
+	private DataInputStream dis = null;
+	private InputStreamReader isr = null;
+	@SuppressWarnings("unused")
+	private String filePath = "";
+	
+	public KTReader(String fullPath) {
+		super(makeFileInputStream(fullPath));
+		filePath = fullPath;
+	}
+	
+	public void initialize() {
+		dis = new DataInputStream(this);
+		isr = new InputStreamReader(this);
+	}
+
+	private static FileInputStream makeFileInputStream(String fullPath) {
+		FileInputStream fis = null;
+		try {
+			File file = new File(fullPath);
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+			fis = new FileInputStream(file);
+		} catch (IOException e){
+			System.err.println("Warning: There was an IO exception when trying to create a file input stream from the path:\n  "+fullPath);
+//			defaultExceptionHandler(e);
+		}
+		return fis;
+	}
+	
+	public DataInputStream stream() {
+		return dis;
+	}
+	
+	public InputStreamReader real() {
+		return isr;
+	}
+	
+	public int read() throws IOException {
+//		return isr.read();
+		return super.read();
+	}
+
+	public byte readByte() throws IOException {
+		return dis.readByte();
+	}
+	
+	public short readShort() throws IOException {
+		return dis.readShort();
+	}
+	
+	public int readInt() throws IOException {
+		return dis.readInt();
+	}
+	
+	public Double readDouble() throws IOException {
+		return dis.readDouble();
+	}
+	
+//	@Override
+//	public void close() throws IOException {
+//		super.close();
+//		dis.close();
+//		isr.close();
+//	}
+	
+	public String getAttributeValue(String attribute) {
+		return getAttributeValue(attribute, false);
+	}
+
+	public String getAttributeValue(String attribute,boolean forgetAboutEndTag) {
+		if (!forgetAboutEndTag) {
+			System.err.println("Reader warning: advancing without knowing an end tag.");
+		}
+		return getAttributeValue(attribute, "NEVERSTOP",true,600);
+	}
+
+	public String getAttributeValue(String attribute, String dontGoPastThisTag) {
+		return getAttributeValue(attribute, dontGoPastThisTag,true,600);
+	}
+	
+	public String getAttributeValue(String attribute, String dontGoPastThisTag, boolean goThroughNumbers, int searchRange) {
+		if (attribute!=null && !attribute.isEmpty()) {
+			String value = null;
+			StringBuilder sb = new StringBuilder();
+			String attributeStartTag = "<"+attribute+">";
+			String attributeEndTag = "</"+attribute+">";
+			String mustEndTag = "</"+dontGoPastThisTag+">";
+			int i = 0;
+			char currentChar = 'a';
+			int ind2 = -1;
+			try {
+				mark(searchRange);
+				while (value == null && sb.length()<256 && (i=super.read())>-1) {
+					currentChar = (char)i;
+					sb.append(currentChar);
+					if (currentChar=='*') {
+						if (goThroughNumbers) {
+							System.err.println("Warning: searching for an attribute, but we are entering a range of numbers!");
+						} else {
+							break;
+						}
+					}
+					ind2 = sb.indexOf(attributeEndTag);
+					if (ind2>-1) {
+						int ind1 = sb.indexOf(attributeStartTag)+attributeStartTag.length();
+						if (ind1>-1 && ind1<ind2) {
+							value = sb.substring(ind1, ind2);
+						}
+					}
+					
+					if (sb.length()>=mustEndTag.length() && sb.toString().endsWith(mustEndTag)) {
+						System.err.println("Warning: reached end of element while searching for its attribute.");
+						break;
+					}
+				}
+//				reset();
+			} catch (IOException e) {
+				defaultExceptionHandler(e);
+			} finally {
+				try { reset(); } catch (IOException e) {}
+			}
+			if (sb.length()<1 || value == null) {
+				System.err.format("Warning: either nothing was read for the attribute, or it could not be found.%n" +
+						"  Attribute: %s, text so far: %n%s%n",attribute,sb.toString());
+//				Thread.dumpStack();
+			}
+			return value;
+		} else {
+			System.err.println("Requested getting an invalid attribute tag from the reader.");
+		}
+		return null;
+	}
+
+	public void advanceToElement(String elementTag) {
+		advanceToElement(elementTag,false);
+	}
+
+	public void advanceToElement(String elementTag,boolean forgetAboutEndTag) {
+		if (!forgetAboutEndTag) {
+			System.err.println("Reader warning: advancing without knowing an end tag.");
+		}
+		advanceToElement(elementTag,"NEVERSTOP");
+	}
+	
+	public void advanceToElement(String elementTag, String dontGoPastThisTag) {
+		String[] bla = new String[1];
+		bla[0] = dontGoPastThisTag;
+		advanceToElement(elementTag,bla);
+	}
+
+	/**
+	 * Advances to the first character after the element tag has been found.
+	 * @param elementTag
+	 * @param dontGoPastThisTag
+	 */
+	public void advanceToElement(String elementTag, String[] dontGoPastThisTag) {
+		if (elementTag != null && !elementTag.isEmpty()) {
+			StringBuilder sb = new StringBuilder();
+			try {
+				int i = 0;
+				String str = "<"+elementTag+">";
+				
+				String[] stopAtThese = new String[dontGoPastThisTag.length];
+				for (int j = 0;j<stopAtThese.length;j++) {
+					String stopHere = "</"+dontGoPastThisTag[j]+">";
+					stopAtThese[j] = stopHere;
+				}
+				while((i=super.read())>-1) {
+					sb.append((char)i);
+					if (sb.indexOf(str)>-1) {
+						break;
+					}
+
+					for (int j = 0;j<stopAtThese.length;j++) {
+						String stopHere = stopAtThese[j];
+						if (sb.indexOf(stopHere)>-1) {
+							System.err.format("Reader Warning: reached the end of super element tag while trying to advance to an element.%n" +
+									"  Element Tag: %s, end tag: %s, Text so far: %n  %s%n",elementTag,dontGoPastThisTag,sb.toString());
+							Thread.dumpStack();
+							break;
+						}
+					}
+				}
+				if (sb.length()<1) {
+					System.err.format("Warning: when trying to advance to an element, the string buffer was empty.%n" +
+							"  element tag: %s, end tag: %s%n",elementTag,dontGoPastThisTag);
+					Thread.dumpStack();
+				}
+			} catch (IOException e) {
+				defaultExceptionHandler(e);
+			}
+		} else {
+			System.err.println("Reader Warning: null or empty value given to advance to in the reader.");
+		}
+	}
+
+	public void advancePastEndTag(String elementEndTag) {
+		if (elementEndTag != null && !elementEndTag.isEmpty()) {
+			StringBuilder sb = new StringBuilder();
+			try {
+				int i = 0;
+				String endTag = "</"+elementEndTag+">";
+				while((i=super.read())>-1) {
+					sb.append((char)i);
+					if (sb.indexOf(endTag)>-1) {
+						break;
+					}
+				}
+				if (sb.length()<1) {
+					System.err.format("Warning: when trying to advance past the end of an element, the string buffer was empty.%n" +
+							"  element tag: %s%n",elementEndTag);
+					Thread.dumpStack();
+				}
+			} catch (IOException e) {
+				defaultExceptionHandler(e);
+			}
+		} else {
+			System.err.println("Reader Warning: null or empty value given to advance to in the reader.");
+		}
+	}
+	
+	public boolean hasElement(String elementTag) {
+		return hasElement(elementTag,false);
+	}
+
+	public boolean hasElement(String elementTag,boolean forgetAboutEndTag) {
+		if (!forgetAboutEndTag) {
+			System.err.println("Reader warning: advancing without knowing an end tag.");
+		}
+		return hasElement(elementTag,"NEVERSTOP");
+	}
+
+	public boolean hasElement(String elementTag,String dontGoPastThisTag) {
+		String[] bla = new String[1];
+		bla[0] = dontGoPastThisTag;
+		return hasElement(elementTag,bla);
+	}
+	
+	public boolean hasElement(String elementTag,String[] dontGoPastThisTag) {
+		if (elementTag != null && !elementTag.isEmpty()) {
+			StringBuilder sb = new StringBuilder();
+			int i = 0;
+			int count=0;
+			try {
+				String str = "<"+elementTag+">";
+				String[] stopAtThese = new String[dontGoPastThisTag.length];
+				for (int j = 0;j<stopAtThese.length;j++) {
+					String stopHere = "</"+dontGoPastThisTag[j]+">";
+					stopAtThese[j] = stopHere;
+				}
+				mark(50000);
+	//			String debugViewString = "";
+				while((i=super.read())>-1 && count<25000) {
+					sb.append((char)i);
+	//				if (sb.length()>60) {
+	//					debugViewString = sb.substring(sb.length()-60, sb.length());
+	//				} else {
+	//					debugViewString = sb.toString();
+	//				}
+					if (sb.length()>=str.length() && 
+						sb.substring(sb.length()-str.length()).equals(str)) 
+					{
+						reset();
+						return true;
+					}
+
+					for (int j = 0;j<stopAtThese.length;j++) {
+						String stopHere = stopAtThese[j];
+						if (sb.indexOf(stopHere)>-1) {
+	//						System.err.println("Reader warning: found the stop tag before finding the element.");
+							reset();
+							return false;
+						}
+					}
+				}
+	//			if (count==0) {
+	//				String msg = "Warning: The reader did not find even one byte when checking for an element: "+elementTag;
+	//				System.err.println(msg);
+	//			}
+			} catch (IOException e) {
+				String msg = "IOException caught when checking if an element is had";
+				System.err.println(msg);
+				defaultExceptionHandler(e);
+			}
+		} else {
+			System.err.println("Reader Warning: null or empty value given to check for in the reader.");
+		}
+		return false;
+	}
+
+	public void advanceToNext(String ownEndTag) {
+		StringBuilder sb = new StringBuilder();
+		try {
+			int i = 0;
+			int level = 0;
+			String destination = "</"+ownEndTag+">";
+			super.read();
+			while(level>=0 && (i=super.read())>-1) {
+				char letter = (char)i;
+				sb.append(letter);
+				if (sb.indexOf(destination)>-1) {
+					break; // you found it!
+				}
+			}
+			if (level>0) {
+				System.err.println("Reader Warning: reached the end of the file while advancing to next, and the level of tags is still positive.");
+			}
+		} catch (IOException e) {
+			String msg = "IOException caught when advancing to next.";
+			System.err.println(msg);
+			defaultExceptionHandler(e);
+		}
+	}
+
+	public void advanceToNext() {
+		StringBuilder sb = new StringBuilder();
+		try {
+			int i = 0;
+			int level = 0;
+//			String stopHere = "</"+dontGoPastThisTag+">";
+			super.read();
+			while(level>=0 && (i=super.read())>-1) {
+				char letter = (char)i;
+				sb.append(letter);
+				if (letter=='>'){
+					int ind1 = sb.lastIndexOf("<");
+					if (ind1>-1) {
+						if (sb.charAt(ind1+1)=='/'){
+							// you closed a tag
+							level--;
+						} else {
+							// you opened a tag
+							level++;
+						}
+					}
+				}
+//				if (sb.indexOf(stopHere)>-1) {
+//					System.err.println("Reader warning: reached the end tag while trying to advance to next.");
+//					break;
+//				}
+			}
+			if (level>0) {
+				System.err.println("Reader Warning: reached the end of the file while advancing to next, and the level of tags is still positive.");
+			}
+		} catch (IOException e) {
+			String msg = "IOException caught when advancing to next.";
+			System.err.println(msg);
+			defaultExceptionHandler(e);
+		}
+	}
+
+	/**
+	 * Advances to the doubles part, and tells 
+	 * the user how many to expect.
+	 * @return
+	 */
+	public String advancePastDoublesCount() {
+		StringBuilder sb = new StringBuilder();
+		try {
+			int i = 0;
+			int countPassed = 0;
+			while((i=read())>-1) {
+				char c = (char)i;
+				if (c!=':') {
+					sb.append((char)i);
+				} else {
+					return sb.toString();
+				}
+				countPassed++;
+				if (countPassed>12) {
+					System.err.println("Reader Warning: could not find the : as expected after advancing 12 characters.");
+					break;
+				}
+			}
+		} catch (Exception e) {
+			defaultExceptionHandler(e);
+		}
+		System.err.println("Reader Warning: could not find the doubles count string. sb="+sb.toString());
+		return "";
+	}
+	
+	public char advancePastTypeChar() {
+		try {
+			int i;
+			int countPassed = 0;
+			while ((i=read())>-1) {
+				if ((char)i=='*') {
+					break;
+				}
+				countPassed++;
+				if (countPassed>10) {
+					System.err.println("Reader Warning: could not find the * as expected after advancing 10 characters.");
+					break;
+				}
+				if ((char)i==':') {
+					System.err.println("Reader Warning: while searching for an * we passed a :, it appears that we missed the *.");
+					break;
+				}
+			}
+			char c = (char)read();
+			return c;
+		} catch (IOException e) {
+			defaultExceptionHandler(e);
+		}
+		return '*';
+	}
+
+	/**
+	 * Advances to the doubles part, and tells 
+	 * the user how many to expect.
+	 * @return
+	 */
+	public int prepareForIntegers() {
+		StringBuilder sb = new StringBuilder();
+		int count = 0;
+		try {
+			String str = String.valueOf((char)read())+String.valueOf((char)read());
+			if (str.equals("*i")){
+				int i =0;
+				int countPassed = 0;
+				while((i=read())>-1) {
+					char c = (char)i;
+					countPassed++;
+					if (c!=':') {
+						sb.append((char)i);
+					} else {
+						count = Integer.parseInt(sb.toString());
+						break;
+					}
+					if (countPassed>12) {
+						System.err.println("Reader warning: tried to prepare for integers, but could not find the start colon.");
+						break;
+					}
+				}
+			} else {
+				System.err.println("Reader warning: tried to prepare for integers, but the file doesn't seem to be giving us integers.");
+			}
+		} catch (Exception e) {
+			defaultExceptionHandler(e);
+		}
+		return count;
+	}
+
+	public String getValue() {
+		System.err.println("Reader warning: advancing without knowing an end tag.");
+		return getValue("NEVERSTOP");
+	}
+
+	public String getValue(String dontGoPastThisTag) {
+		StringBuilder sb = new StringBuilder();
+		try {
+			int i = 0;
+			int countPassed = 0;
+			String stopHere = "</"+dontGoPastThisTag+">";
+			while ((i= read())>-1){
+				char c = (char)i;
+				countPassed++;
+				if (c != '<') {
+					sb.append(c);
+				} else {
+					return sb.toString();
+				}
+				if (countPassed>400) {
+					System.err.println("Reader warning: tried to get a value, but I have already passed 400 characters, the current value is:\n "
+							+ sb.toString());
+					break;
+				}
+				if (sb.indexOf(stopHere)>-1) {
+					System.err.println("Reader warning: tried to get a value, but I have reached the end tag, the current value is:\n "
+							+ sb.toString());
+					break;
+				}
+			}
+		} catch (IOException e) {
+			defaultExceptionHandler(e);
+		}
+		System.err.println("Reader Warning: could not get the current value in the stream.");
+		return null;
+	}
+	
+	public char skipNumbers() {
+		char letter = 'a';
+		String str = "";
+		char letter2 = 'a';
+		int ind = 0;
+		int count = 0;
+		try {
+			letter2 = (char)read();
+			int countPassed = 0;
+			while ((letter=(char)read())!=':') {
+				str+=letter;
+				countPassed++;
+				if (letter=='<' || letter =='>') {
+					System.err.println("Reader warning: trying to skip the numbers but we found a tag start/stop before we found the colon");
+					break;
+				}
+				if (countPassed>12) {
+					System.err.println("Reader warning: trying to skip the numbers but we cannot find the colon after advancing 12 characters.");
+					break;
+				}
+			}
+			ind = str.indexOf(",");
+			if (ind>=0) {
+				str = str.substring(0,ind);
+			}
+			count = Integer.parseInt(str);
+			if (count<=0) {
+				System.err.println("Count = 0, string is "+str);
+			}
+			if (letter2=='d'){
+				for (int j = 0;j<count;j++) {
+					readDouble();
+				}
+			} else if (letter2 == 'i') {
+				for (int j = 0;j<count;j++) {
+					readInt();
+				}
+			} else if (letter2 == 's') {
+				for (int j = 0;j<count;j++) {
+					readShort();
+				}
+			} else if (letter2 == 'b') {
+				for (int j = 0;j<count;j++) {
+					readShort();
+				}
+			} else {
+				System.err.println("Reader warning: trying to skip the numbers but the strategy letter is not recognized: "+letter2);
+			}
+			return letter2;
+		} catch (IOException e) {
+			defaultExceptionHandler(e);
+		} catch (NumberFormatException e) {
+			System.err.println("There was a number format exception: ");
+			e.printStackTrace();
+			// just resumes, it was probably not supposed to skip any numbers.
+			// this may cause a problem by skipping values like the id tag,
+			// or passing the end element.
+		}
+		System.err.println("Reader Warning: we may have failed to skip numbers as appropriate, the count skipped is unknown (0).");
+		return 0;
+	}
+	
+	private void defaultExceptionHandler(Exception e) {
+		System.err.format("An exception was thrown by thread %s, in class %s, method %s%n" +
+				"   type: %s, message: %s%n" +
+				"   ", Thread.currentThread().getName(),getClass(),
+				Thread.currentThread().getStackTrace()[2].getMethodName(),
+				e.getClass(),e.getMessage());
+	}
+}

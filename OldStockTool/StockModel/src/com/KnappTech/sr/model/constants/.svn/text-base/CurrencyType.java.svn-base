@@ -1,0 +1,11 @@
+package com.kt.sr.model.constants;
+
+public enum CurrencyType {
+	USDOLLAR,
+	YEN,
+	EURO;
+	
+	private CurrencyType() {
+		
+	}
+}

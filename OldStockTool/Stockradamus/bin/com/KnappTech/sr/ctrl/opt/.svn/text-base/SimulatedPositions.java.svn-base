@@ -1,0 +1,189 @@
+package com.kt.sr.ctrl.opt;
+
+import java.util.ArrayList;
+
+import org.apache.commons.math.linear.MatrixUtils;
+import org.apache.commons.math.linear.RealMatrix;
+
+import com.kt.sr.model.comp.Companies;
+import com.kt.sr.model.user.Investor;
+
+public class SimulatedPositions {
+	private static final long serialVersionUID = 201007122220L;
+	private RealMatrix covarianceMatrix = null;
+	private ArrayList<SimulatedPosition> positions = new ArrayList<SimulatedPosition>();
+	
+	private SimulatedPositions() {
+		
+	}
+	
+	public SimulatedPositions(Companies companies) {
+		System.out.println("Creating the covariance matrix.");
+		createCovarianceMatrix(companies,true);
+		System.out.println("Finished creating the covariance matrix.");
+		positions = companies.createSimulatedPositions();
+	}
+	
+	public SimulatedPositions clone() {
+		SimulatedPositions cl = new SimulatedPositions();
+		for (SimulatedPosition sh : positions) {
+			cl.positions.add(sh.clone());
+		}
+		cl.setCovarianceMatrix(covarianceMatrix);
+		return cl;
+	}
+	
+	public SimulatedPositions spawnChildPositions(Investor investor,double maxOffset) {
+		SimulatedPositions newInputs = new SimulatedPositions();
+		newInputs.setCovarianceMatrix(covarianceMatrix);
+		for (SimulatedPosition input : positions) {
+			SimulatedPosition newInput = input.spawnChildPosition(investor,maxOffset);
+			newInputs.positions.add(newInput);
+		}
+		return newInputs;
+	}
+
+	public double getTotalTransactionCost(Investor investor) {
+		double sum = 0;
+		for (SimulatedPosition position : positions) {
+			sum += position.getTransactionCost(investor.getTradingFee(), investor);
+		}
+		return sum;
+	}
+
+	public double getEstimatedFinalPortfolioValue() {
+		double sum = 0;
+		for (SimulatedPosition inp : positions) {
+			sum += inp.getEstimatedFinalPositionValue();
+		}
+		return sum;
+	}
+
+	public double getFinalStandardDeviation() {
+		if (covarianceMatrix!=null) {
+			try {
+				double[] shares = getShareQuantities();
+				RealMatrix sh = MatrixUtils.createColumnRealMatrix(shares);
+				RealMatrix m1 = covarianceMatrix.multiply(sh);
+				RealMatrix sol = sh.transpose().multiply(m1);
+				double vr = sol.getEntry(0, 0);
+				double sd = Math.pow(vr, 0.5);
+				return sd;
+			} catch (Exception e) {
+				System.err.println("Warning: an unhandled exception was thrown while " +
+						"trying to compute the final standard deviation.");
+				e.printStackTrace();
+			}
+		} else {
+			System.err.println("Warning: tried computing the final " +
+					"standard deviation for share inputs, but the " +
+					"covariance matrix was null.");
+		}
+		return 0;
+	}
+	
+	private void createCovarianceMatrix(Companies companies,boolean multiThread) {
+		covarianceMatrix = companies.produceCovarianceMatrix(multiThread);
+	}
+	
+	public double[] getShareQuantities() {
+		double[] d = new double[size()];
+		for (int i = 0;i<size();i++) {
+			SimulatedPosition sh = positions.get(i);
+			d[i] = sh.getNumberOfShares();
+		}
+		return d;
+		
+	}
+	
+	public double getStandardDeviation() {
+		double[] shares = getShareQuantities();
+		RealMatrix sh = MatrixUtils.createColumnRealMatrix(shares);
+		RealMatrix m1 = getCovarianceMatrix().multiply(sh);
+		RealMatrix sol = sh.transpose().multiply(m1);
+		double vr = sol.getEntry(0, 0);
+		double sd = Math.pow(vr, 0.5);
+		return sd;
+	}
+
+	private void setCovarianceMatrix(RealMatrix covarianceMatrix) {
+		this.covarianceMatrix = covarianceMatrix;
+	}
+
+	public RealMatrix getCovarianceMatrix() {
+		return covarianceMatrix;
+	}
+
+	public String getDetails(Investor investor) {
+		String str = "Ticker:; Init. Quantity:; Buy:; Final Quantity:; " +
+				"Initial Price:; Value:; Trans. Cost:; " +
+				"Expected Price:; Expected Value:\n";
+		for (SimulatedPosition input : positions) {
+			String s = input.getDetails(investor);
+			if (s!=null) {
+				str+=s+"\n";
+			}
+		}
+		return str;
+	}
+	
+
+	public double getTotalShortValue() {
+		double shortValue = 0;
+		for (SimulatedPosition p : positions) {
+			if (p.isShort()) {
+				shortValue-=p.getPositionValue();
+			}
+		}
+		return shortValue;
+	}
+	
+
+	public double getTotalNonShortValue() {
+		double nonShortValue = 0;
+		for (SimulatedPosition p : positions) {
+			if (!p.isShort()) {
+				nonShortValue+=p.getPositionValue();
+			}
+		}
+		return nonShortValue;
+	}
+	
+	public double getTotalValue() {
+		double worth = 0;
+		for (SimulatedPosition p : positions) {
+			worth+=p.getPositionValue();
+		}
+		return worth;
+	}
+	
+	public int size() {
+		return positions.size();
+	}
+	
+	public double findMaxValueDifferenceBetweenTwoPositions(
+			SimulatedPositions otherPositions) {
+		double distance = 0;
+		for (SimulatedPosition position : positions) {
+			for (SimulatedPosition otherPosition : otherPositions.positions) {
+				double dist = position.getPositionValue()-otherPosition.getPositionValue();
+				distance = Math.max(dist, distance);
+			}
+		}
+		return distance;
+	}
+
+	public double findDistance(SimulatedPositions otherPositions) {
+		double distance = 0;
+		double sumOfSquares = 0;
+		for (SimulatedPosition position : positions) {
+			for (SimulatedPosition otherPosition : otherPositions.positions) {
+				double dist = position.getNumberOfShares()-otherPosition.getNumberOfShares();
+				double dist2 = Math.pow(dist,2);
+				sumOfSquares+=dist2;
+			}
+		}
+		distance = Math.pow(sumOfSquares, 0.5);
+		return distance;
+	}
+}

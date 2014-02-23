@@ -1,0 +1,39 @@
+package com.kt.sr.model.comp;
+
+import com.kt.sr.model.NamedKTObject;
+import com.kt.sr.persistence.SectorManager;
+
+public class Sector extends NamedKTObject {
+	private static final long serialVersionUID = 201005182223L;
+
+	protected Sector(short index,String name) {
+		super(index,name);
+	}
+
+	@Override
+	public int compareTo(String o) {
+		return getID().compareTo(o);
+	}
+	
+	protected static SectorManager i() {
+		return SectorManager.i();
+	}
+	
+	public static final Sector getOrCreate(String name) {
+		Sector nkto = i().getItem(name);
+		if (nkto==null) {
+			nkto = createInstance(name);
+		}
+		return nkto;
+	}
+	
+	public static final Sector createInstance(String name) {
+		if (!i().has(name)) {
+			short ind = (short)i().size();
+			Sector nkto = new Sector(ind,name);
+			i().add(nkto);
+			return nkto;
+		}
+		return null;
+	}
+}

@@ -1,0 +1,76 @@
+package com.kt.sr.model.Regressable;
+
+import com.kt.model.LiteDate;
+
+/**
+ * A record of a date and value.
+ * @author Michael Knapp
+ */
+public class Record implements Comparable<Record>, Cloneable {
+	private final LiteDate date;
+	private final Double value;
+	
+	private Record(LiteDate date, double value) {
+		this.date = date;
+		this.value=value;
+	}
+	
+	public static final Record create(LiteDate date,double value) {
+		if (date!=null) {
+			return new Record(date,value);
+		} else {
+			throw new IllegalArgumentException("Cannot create a record with date: "+
+					date+", and value: "+value);
+		}
+	}
+	
+	public LiteDate getDate() {
+		return date;
+	}
+	
+	public Double getValue() {
+		return value;
+	}
+	
+	public boolean equals(Object o) {
+		if (o instanceof Record) {
+			Record r = (Record)o;
+			LiteDate rd = r.getDate();
+			if (rd!=null) {
+				return r.getDate().equals(getDate());
+			}
+			return (rd==null && date==null);
+		}
+		return false;
+	}
+	
+	public int hashCode() {
+		if (date!=null) {
+			return date.hashCode()+1;
+		}
+		return -1;
+	}
+	
+	public String toString() {
+		if (date!=null) {
+			return date.toString()+": "+value+"\n";
+		}
+		return "null date: "+value+"\n";
+	}
+
+	@Override
+	public int compareTo(Record r) {
+		if (date!=null && r.getDate()!=null) {
+			return date.compareTo(r.getDate());
+		} else if (date!=null) {
+			return -1;
+		} else {
+			return 1;
+		}
+	}
+	
+	public Record clone() {
+		Record r = new Record(date,new Double(value));
+		return r;
+	}
+}

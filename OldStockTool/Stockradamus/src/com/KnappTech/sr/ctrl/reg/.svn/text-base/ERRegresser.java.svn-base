@@ -1,0 +1,349 @@
+package com.kt.sr.ctrl.reg;
+
+import org.apache.commons.math.linear.SingularMatrixException;
+
+import com.kt.model.LiteDate;
+import com.kt.model.UpdateFrequency;
+import com.kt.sr.model.Regressable.EconomicRecord;
+import com.kt.sr.model.Regressable.EconomicRecords;
+import com.kt.sr.model.Regressable.PriceHistory;
+import com.kt.sr.model.Regressable.Record;
+import com.kt.sr.model.Regressable.RecordFilter;
+import com.kt.sr.model.Regressable.RecordList;
+import com.kt.sr.model.Regressable.RecordSet;
+import com.kt.sr.model.comp.Company;
+import com.kt.sr.model.comp.RegressionResult;
+import com.kt.sr.model.constants.RegressionMethod;
+import com.kt.sr.persistence.EconomicRecordManager;
+import com.kt.sr.persistence.PriceHistoryManager;
+
+public class ERRegresser {
+	private static final long serialVersionUID = 201003061051L;
+	
+	/**
+	 * The limit on the size of the working set of indicators.
+	 */
+	public static final int MAXINDICATORS = 16;
+//	public static final UpdateFrequency COMPARISONFREQUENCY = UpdateFrequency.WEEKLY;
+	
+	/**
+	 * The company we are forming a prediction for.
+	 */
+	private Company company = null;
+	
+	/**
+	 * The set of economic indicators that remained after filtering
+	 * out all of the useless economic indicators.  The bad indicators
+	 * will have problems like too many zeros, nulls, invalid entries,
+	 * not having enough points in the time frame provided, etc.
+	 */
+//	private EconomicRecords usefulEconomicRecords = null;
+	
+	/**
+	 * The set of economic records we are using to make a prediction.  This 
+	 * is the set whose size must not exceed the max number of indicators.
+	 */
+	private EconomicRecords predictingEconomicRecords = null;
+	private RegressionRater stockradamus = null;
+	private double bestRating = Double.MIN_VALUE;
+	private String removedID = null;
+	private RegressionMethod rm = null;
+	private ERFilter filter = null;
+	private int countOfRegressionsPerformed = 0;
+	private int count = 0;
+	private double lastRating = 0;
+	
+	public ERRegresser() {
+	}
+	
+	public LiteDate calculateMaxStartDateForIndicators(RecordList<Record> history) {
+		LiteDate startPlusTwo = history.getStartDate().addYears(2);
+		LiteDate twelveYearsAgo = history.getEndDate().addYears(-12);
+		if (startPlusTwo.after(twelveYearsAgo)) {
+			return startPlusTwo;
+		} else {
+			return twelveYearsAgo;
+		}
+	}
+	
+	public void executeRegression(Company company) {
+		if (company!=null) {
+			this.company = company;
+		}
+		PriceHistory history = company.loadPriceHistoryIfNecessary();
+		if (history!=null) {
+			EconomicRecords allLoadedEconomicRecords;
+			try {
+				allLoadedEconomicRecords = EconomicRecordManager.getAllThatAreLoaded();
+				allLoadedEconomicRecords.sortByUsefulness();
+				if (allLoadedEconomicRecords.size()>2500) {
+					System.err.println("Warning: there are "+allLoadedEconomicRecords.size()+" records to consider, but the regression " +
+							"finder loop escapes at 1000");
+				}
+				
+				long startTime = System.currentTimeMillis();
+				lastRating = -(Double.MAX_VALUE/1000);
+				if (history.size()>240) {
+					System.out.println("Starting regression find for "+company.getID());
+					LiteDate maxStartDateForIndicators = calculateMaxStartDateForIndicators(history);
+					LiteDate minEndDateForIndicators = (LiteDate.getOrCreate()).addMonths(-2);
+					predictingEconomicRecords = new EconomicRecords();
+					filter = new ERFilter(predictingEconomicRecords, maxStartDateForIndicators, 
+							minEndDateForIndicators, 240);
+					predictingEconomicRecords = allLoadedEconomicRecords.subSet(filter,MAXINDICATORS);
+					stockradamus = new RegressionRater(history,predictingEconomicRecords);
+					stockradamus.setRegressionMethod(RegressionMethod.COEFFOFDET);
+					filter.setMinimumRealValues(240);
+					setCountOfRegressionsPerformed(0);
+					setCount(0);
+					allLoadedEconomicRecords.executeRegression(this);
+					System.out.println("Finished regressions against all indicators, " +
+							"best rating so far: "+getBestRating()+"\nnow reducing the indicator set.");
+					if (getCount()>2200) {
+						System.err.println("Warning: ER Regresser loop seems to go forever, count of iterations = "+getCount()+
+								", the loop escapes at 2500, records size = "+allLoadedEconomicRecords.size());
+					}
+					
+					if (predictingEconomicRecords.size()<1) {
+						System.err.println("Warning: the regresser did not find even one record to regress against.");
+					} else if (predictingEconomicRecords.size()<MAXINDICATORS) {
+						System.err.println("Warning: the regresser did not find the minimum of 16 records to regress against.");
+					}
+					
+					System.out.println("About to remove indicators while the score improves.");
+					// remove indicators while the score increases for that.
+					boolean scoreIsWorse = false;
+					RecordList<Record> weakestIndicator = null;
+					double rating = stockradamus.getRegressionMethod().getWorstPossibleRating();
+					while (!scoreIsWorse && predictingEconomicRecords.size()>1) {
+						try {
+							stockradamus.setIndicators(predictingEconomicRecords);
+							stockradamus.evaluate();
+							rating = stockradamus.getRating();
+							scoreIsWorse = stockradamus.getRegressionMethod().isFirstScoreWorse(rating,getBestRating());
+							if (scoreIsWorse) { // undo last remove:
+								predictingEconomicRecords.add((EconomicRecord) weakestIndicator);
+								stockradamus.setIndicators(predictingEconomicRecords);
+								stockradamus.evaluate();
+							} else { // try removing another.
+								setBestRating(rating);
+								removedID = stockradamus.getWeakestID();
+								predictingEconomicRecords.remove(removedID);
+							}
+						} catch (Exception e) {
+							System.err.println("Warning: uncaught exception in the er regresser while loop (875325)");
+						}
+					}
+					predictingEconomicRecords.incrementTimesUsedInRegressionResult();
+					stockradamus.setIndicators(predictingEconomicRecords);
+					stockradamus.evaluate();
+					RegressionResult r = stockradamus.getResults();
+					r.setRegressionMethod(RegressionMethod.COEFFOFDET);
+					company.addRegressionResults(r);
+					long endTime = System.currentTimeMillis();
+					double duration = Math.round((endTime-startTime)/100)/10;
+					System.out.println("Regression took "+duration+" seconds.");
+					
+					double lv = history.getLastValidValue();
+					if (getBestRating()>0) {
+						System.out.format("Finished regressing %s, best rating: %.2f, st dev: %.2f, History Last Value: %.2f, estimate: %.2f%n",
+							history.getID(), getBestRating(), r.getStandardDeviation(), lv, r.getUpToDateEstimate());
+					} else {
+						System.out.println("Regression finding algorithm failed for "+company.getID());
+					}
+					System.out.println("Finished regression find for "+company.getID());
+				}
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
+			PriceHistoryManager.remove(history.getID());
+		}
+	}
+	
+	public void regress(EconomicRecord currentRecord) {
+		try {
+			if (filter.acceptable(currentRecord)) { 
+				if (predictingEconomicRecords.size()>=MAXINDICATORS) {
+					removedID = stockradamus.getWeakestID();
+					if (removedID!=null) {
+						if (!predictingEconomicRecords.remove(removedID)) {
+							if (predictingEconomicRecords.size()>0) {
+								System.err.println("Failed to remove weakest id.");
+								boolean b = predictingEconomicRecords.removeSmallestRecord();
+								if (!b) {
+									System.err.println("Cannot seem to reduce the size of " +
+											"these economic records");
+								}
+							}
+						}
+					} else {
+						System.err.println("Weakest id was null.");
+						boolean b = predictingEconomicRecords.removeSmallestRecord();
+					}
+				}
+				if (predictingEconomicRecords.addIfNotDuplicate((EconomicRecord)currentRecord.clone())) {
+					if (predictingEconomicRecords.size()>MAXINDICATORS) {
+						System.out.println("Expecting "+MAXINDICATORS+" in adjusted indicators, " +
+								"but have "+predictingEconomicRecords.size());
+					}
+					stockradamus.setIndicators(predictingEconomicRecords);
+					stockradamus.evaluate();
+					setCountOfRegressionsPerformed(getCountOfRegressionsPerformed() + 1);
+					if (getCountOfRegressionsPerformed()%50==0) {
+						String msg = "For "+company.getID()+" we have considered "+getCount()+" economic records and performed "+
+							getCountOfRegressionsPerformed()+" regressions, the best rating is "+getBestRating();
+						System.out.println(msg);
+					}
+					double rating = stockradamus.getRating();
+					if (predictingEconomicRecords.size()>=MAXINDICATORS) {
+						// if the new rating is worse than the last rating...
+						if (stockradamus.getRegressionMethod().isFirstScoreBetter(lastRating, rating))
+						{	// ... then you should remove the record that was just added.
+							predictingEconomicRecords.remove(currentRecord.getID());
+						}
+						setBestRating(stockradamus.getRegressionMethod().getTheBetterScore(rating, getBestRating()));
+						lastRating=rating;
+					}
+				} else {
+					System.err.println("Warning: Tried adding a record to the indicators, but it was refused.");
+				}
+			}
+			setCount(getCount() + 1);
+			
+		} catch (SingularMatrixException e) {
+			System.out.println("Encountered a singular matrix exception.");
+			predictingEconomicRecords.remove(currentRecord.getID());
+		} catch (Exception e) {
+			System.err.println("Warning: uncaught exception in er regresser (2587150)");
+			e.printStackTrace();
+		}
+	}
+	
+	public class SimpleERFilter implements RecordFilter {
+		private LiteDate maxStartDateForIndicators = null;
+		private LiteDate minEndDateForIndicators = null;
+		private int minimumRealValues = 300;
+		public SimpleERFilter(LiteDate maxStartDateForIndicators,
+				LiteDate minEndDateForIndicators,
+				int minimumRealValues) {
+			this.maxStartDateForIndicators = maxStartDateForIndicators;
+			this.minEndDateForIndicators = minEndDateForIndicators;
+			this.minimumRealValues = minimumRealValues;
+		}
+		
+		@Override
+		public boolean acceptable(RecordList<? extends Record> record) {
+			boolean b0 = (record!=null && 
+					record.getStartDate()!=null &&
+					record.getEndDate()!=null);
+			if (b0) {
+				boolean b1 = !record.getStartDate().after(maxStartDateForIndicators);
+				boolean b2 = !record.getEndDate().before(minEndDateForIndicators);
+				boolean b4 = record.sizeOfValidEntries()>minimumRealValues;
+				return (b0 && b1 && b2 && b4);
+			}
+			return false;
+		}
+		
+		public void setMinimumRealValues(int minReal) {
+			this.minimumRealValues = minReal;
+		}
+
+		@Override
+		public RecordSet<? extends RecordList<? extends Record>> getCurrentRecords() {
+			return null;
+		}
+
+		@Override
+		public void setCurrentRecords(
+				RecordSet<? extends RecordList<? extends Record>> records) {
+			// do nothing.
+		}
+	}
+	
+	public class ERFilter implements RecordFilter {
+		private LiteDate maxStartDateForIndicators = null;
+		private LiteDate minEndDateForIndicators = null;
+		private EconomicRecords adjustedIndicators = null;
+		private int minimumRealValues = 300;
+		
+		public ERFilter(EconomicRecords adjustedIndicators,
+				LiteDate maxStartDateForIndicators,LiteDate minEndDateForIndicators,
+				int minimumRealValues) {
+			this.adjustedIndicators = adjustedIndicators;
+			this.maxStartDateForIndicators = maxStartDateForIndicators;
+			this.minEndDateForIndicators = minEndDateForIndicators;
+			this.minimumRealValues = minimumRealValues;
+		}
+		
+		@Override
+		public boolean acceptable(RecordList<? extends Record> record) {
+			boolean b0 = (record!=null && 
+					record.getStartDate()!=null &&
+					record.getEndDate()!=null);
+			if (b0) {
+				boolean b1 = !record.getStartDate().after(maxStartDateForIndicators);
+				boolean b2 = !record.getEndDate().before(minEndDateForIndicators);
+				boolean b3 = !adjustedIndicators.hasSimilarList((EconomicRecord)record);
+				boolean b4 = record.sizeOfValidEntries()>minimumRealValues;
+				return (b0 && b1 && b2 && b3 && b4);
+			}
+			return false;
+		}
+		
+		public void setMinimumRealValues(int minReal) {
+			this.minimumRealValues = minReal;
+		}
+
+		@Override
+		public EconomicRecords getCurrentRecords() {
+			return adjustedIndicators;
+		}
+
+		@Override
+		public void setCurrentRecords(
+				RecordSet<? extends RecordList<? extends Record>> records) {
+			this.adjustedIndicators = (EconomicRecords)records;
+		}
+	}
+
+	public void setCompany(Company company) {
+		this.company = company;
+	}
+
+	public Company getCompany() {
+		return company;
+	}
+
+	public void setRm(RegressionMethod rm) {
+		this.rm = rm;
+	}
+
+	public RegressionMethod getRm() {
+		return rm;
+	}
+
+	public void setBestRating(double bestRating) {
+		this.bestRating = bestRating;
+	}
+
+	public double getBestRating() {
+		return bestRating;
+	}
+
+	public void setCountOfRegressionsPerformed(int countOfRegressionsPerformed) {
+		this.countOfRegressionsPerformed = countOfRegressionsPerformed;
+	}
+
+	public int getCountOfRegressionsPerformed() {
+		return countOfRegressionsPerformed;
+	}
+
+	public void setCount(int count) {
+		this.count = count;
+	}
+
+	public int getCount() {
+		return count;
+	}
+}

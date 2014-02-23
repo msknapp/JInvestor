@@ -1,0 +1,64 @@
+package com.kt.sr.ctrl.acq;
+
+import java.util.LinkedHashSet;
+
+import com.kt.sr.ctrl.parse.TickerReader;
+import com.kt.sr.model.comp.Companies;
+import com.kt.sr.persistence.CompanyManager;
+import com.kt.sr.persistence.IndustryManager;
+import com.kt.sr.persistence.SectorManager;
+
+public class CompanyRetriever {
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		// loading companies could take a while, start immediately.
+		try {
+			CompanyManager.loadEverythingStored();
+			IndustryManager.Load();
+			SectorManager.Load();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		TickerReader.setRange(20);
+		
+		System.out.println("Waiting for all companies to load...");
+		Companies companies;
+		try {
+			companies = CompanyManager.waitForEverythingStored();
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		
+		System.out.println("Finished loading, starting the primary for loop.");
+		for (int i = 1;i<6677;i+=20){
+			System.out.println("now on row: "+i);
+			TickerReader.setStartRow(i);
+			companies = new Companies();
+			TickerReader.setCompanies(companies);
+			TickerReader.update();
+			if (companies==null || companies.isEmpty()) {
+				System.err.println("Warning: the companies downloaded is null/empty.");
+			}
+			if (companies.hasInvalidObject()) {
+				System.err.println("Warning: invalid company created!");
+			}
+			
+			try {
+				CompanyManager.saveAll(companies,true);
+				IndustryManager.Save();
+				SectorManager.Save();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			LinkedHashSet<String> ids = companies.getIDSet();
+			CompanyManager.remove(ids);
+		}
+	}
+}

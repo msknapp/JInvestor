@@ -1,0 +1,9 @@
+package com.kt.model;
+
+import com.kt.view.report.Report;
+import com.kt.view.report.ReportSettings;
+
+public interface ReportableSet {
+	public Report getReport(ReportSettings settings);
+//	public ReportableSet load();
+}

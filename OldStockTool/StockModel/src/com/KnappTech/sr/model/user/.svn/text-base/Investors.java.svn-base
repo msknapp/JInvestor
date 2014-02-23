@@ -1,0 +1,34 @@
+package com.kt.sr.model.user;
+
+import com.kt.model.KTSet;
+import com.kt.model.ReportableSet;
+import com.kt.sr.model.AbstractKTSet;
+import com.kt.view.report.Report;
+import com.kt.view.report.ReportRow;
+import com.kt.view.report.ReportSettings;
+
+public class Investors extends AbstractKTSet<Investor> implements ReportableSet {
+	private static final long serialVersionUID = 201001181302L;
+
+	@Override
+	public int compareTo(String o) {
+		return 0;
+	}
+
+	@Override
+	public Report getReport(ReportSettings settings) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ReportRow getReportRow(ReportSettings settings) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean save(boolean multiThread) throws InterruptedException {
+		return false;
+	}
+}
