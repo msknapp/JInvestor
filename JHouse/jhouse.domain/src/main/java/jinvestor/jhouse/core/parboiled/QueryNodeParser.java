@@ -1,4 +1,4 @@
-package jinvestor.jhouse.parboiled;
+package jinvestor.jhouse.core.parboiled;
 
 /*
  * #%L
@@ -20,7 +20,7 @@ package jinvestor.jhouse.parboiled;
  * #L%
  */
 
-import jinvestor.jhouse.query.QueryNode;
+import jinvestor.jhouse.core.query.QueryNode;
 
 import org.parboiled.Action;
 import org.parboiled.BaseParser;

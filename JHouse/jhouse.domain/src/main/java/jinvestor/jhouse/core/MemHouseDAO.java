@@ -1,4 +1,4 @@
-package jinvestor.jhouse.download;
+package jinvestor.jhouse.core;
 
 /*
  * #%L
@@ -25,8 +25,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jinvestor.jhouse.House;
-import jinvestor.jhouse.util.HouseQueryUtil;
+import jinvestor.jhouse.core.query.QueryNode;
+import jinvestor.jhouse.core.query.QueryPart;
+import jinvestor.jhouse.core.util.HouseQueryUtil;
 
 public class MemHouseDAO implements HouseDAO {
 	
@@ -63,6 +64,11 @@ public class MemHouseDAO implements HouseDAO {
 			}
 		}
 		return homes;
+	}
+	
+	public static boolean matches(House house,String query) {
+		QueryPart qp = QueryNode.parseNode(query).toQueryPart();
+		return qp.passes(house);
 	}
 
 	@Override

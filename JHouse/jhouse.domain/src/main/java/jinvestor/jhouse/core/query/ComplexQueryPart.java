@@ -1,4 +1,4 @@
-package jinvestor.jhouse.query;
+package jinvestor.jhouse.core.query;
 
 /*
  * #%L

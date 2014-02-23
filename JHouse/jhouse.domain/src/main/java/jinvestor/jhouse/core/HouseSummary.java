@@ -1,4 +1,4 @@
-package jinvestor.jhouse.util;
+package jinvestor.jhouse.core;
 
 /*
  * #%L
@@ -20,16 +20,18 @@ package jinvestor.jhouse.util;
  * #L%
  */
 
-import jinvestor.jhouse.House;
-import jinvestor.jhouse.query.QueryNode;
-import jinvestor.jhouse.query.QueryPart;
+public class HouseSummary {
 
-public final class HouseQueryUtil {
-	private HouseQueryUtil(){}
 	
-	public static boolean matches(House house,String query) {
-		QueryPart qp = QueryNode.parseNode(query).toQueryPart();
-		return qp.passes(house);
+	private HouseSummary(HouseSummaryBuilder builder) {
+		
 	}
 	
+	public static HouseSummaryBuilder builder() {
+		return new HouseSummaryBuilder();
+	}
+	
+	public static class HouseSummaryBuilder {
+		
+	}
 }

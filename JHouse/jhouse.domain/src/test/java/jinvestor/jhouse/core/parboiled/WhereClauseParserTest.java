@@ -1,4 +1,4 @@
-package jinvestor.jhouse.parboiled;
+package jinvestor.jhouse.core.parboiled;
 
 /*
  * #%L
@@ -20,30 +20,26 @@ package jinvestor.jhouse.parboiled;
  * #L%
  */
 
-import jinvestor.jhouse.parboiled.QueryNodeParser;
-import jinvestor.jhouse.query.QueryNode;
-import jinvestor.jhouse.query.QueryPart;
+import jinvestor.jhouse.core.parboiled.WhereClauseParser;
+import jinvestor.jhouse.core.query.QueryPart;
+import jinvestor.jhouse.core.query.QueryPartBuilder;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.parboiled.Parboiled;
 import org.parboiled.parserunners.ReportingParseRunner;
 import org.parboiled.support.ParsingResult;
 
-public class QueryNodeParserTest {
+public class WhereClauseParserTest {
 
 	@Test
+	@Ignore("The where clause parser does not work, use the QueryNodeParser instead.")
 	public void parse() {
-		String input = "foo='bar ( testing! ' and (a='b\"()' or c<'8') ";
-		QueryNodeParser parser = Parboiled.createParser(QueryNodeParser.class);
-		ParsingResult<QueryNode> result = ReportingParseRunner.run(
-				parser.root(), input);
-		QueryNode qn = result.resultValue;
-		while (qn.parent!=null) {
-			qn = qn.parent;
-		}
-		QueryPart qp = qn.toQueryPart();
-		System.out.println(qp.toString());
-		
+		String input = "";
+		WhereClauseParser parser = Parboiled.createParser(WhereClauseParser.class);
+		ParsingResult<QueryPartBuilder> result = ReportingParseRunner.run(parser.root(), input);
+		QueryPartBuilder b = result.valueStack.peek();
+		QueryPart p = b.build();
 		
 	}
 }

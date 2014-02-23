@@ -1,4 +1,4 @@
-package jinvestor.jhouse.query;
+package jinvestor.jhouse.core.util;
 
 /*
  * #%L
@@ -20,10 +20,16 @@ package jinvestor.jhouse.query;
  * #L%
  */
 
-import org.apache.hadoop.hbase.filter.Filter;
+import jinvestor.jhouse.core.query.QueryNode;
+import jinvestor.jhouse.core.query.QueryPart;
+import jinvestor.jhouse.core.House;
 
-
-public interface QueryPart {
-	boolean passes(Object house);
-	Filter toFilter(byte[] family);
+public final class HouseQueryUtil {
+	private HouseQueryUtil(){}
+	
+	public static boolean matches(House house,String query) {
+		QueryPart qp = QueryNode.parseNode(query).toQueryPart();
+		return qp.passes(house);
+	}
+	
 }

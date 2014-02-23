@@ -24,7 +24,7 @@ import java.io.IOException;
 
 import javax.xml.parsers.ParserConfigurationException;
 
-import jinvestor.jhouse.download.MemHouseDAO;
+import jinvestor.jhouse.core.MemHouseDAO;
 import jinvestor.jhouse.download.SearchProcessor;
 
 import org.codehaus.jackson.JsonProcessingException;

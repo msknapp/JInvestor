@@ -26,8 +26,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
 
-import jinvestor.jhouse.House;
-import jinvestor.jhouse.House.HouseBuilder;
+import jinvestor.jhouse.core.House;
+import jinvestor.jhouse.core.House.HouseBuilder;
+import jinvestor.jhouse.core.HouseDAO;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.log4j.Logger;

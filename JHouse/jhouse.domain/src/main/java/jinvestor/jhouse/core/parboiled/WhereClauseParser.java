@@ -1,4 +1,4 @@
-package jinvestor.jhouse.parboiled;
+package jinvestor.jhouse.core.parboiled;
 
 /*
  * #%L
@@ -20,10 +20,10 @@ package jinvestor.jhouse.parboiled;
  * #L%
  */
 
-import jinvestor.jhouse.query.ComplexQueryPart;
-import jinvestor.jhouse.query.QueryNode;
-import jinvestor.jhouse.query.QueryPartBuilder;
-import jinvestor.jhouse.query.ComplexQueryPart.ComplexQueryPartBuilder;
+import jinvestor.jhouse.core.query.ComplexQueryPart;
+import jinvestor.jhouse.core.query.QueryNode;
+import jinvestor.jhouse.core.query.QueryPartBuilder;
+import jinvestor.jhouse.core.query.ComplexQueryPart.ComplexQueryPartBuilder;
 
 import org.parboiled.Action;
 import org.parboiled.BaseParser;

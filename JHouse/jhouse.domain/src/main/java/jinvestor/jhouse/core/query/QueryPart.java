@@ -1,4 +1,4 @@
-package jinvestor.jhouse.query;
+package jinvestor.jhouse.core.query;
 
 /*
  * #%L
@@ -20,6 +20,10 @@ package jinvestor.jhouse.query;
  * #L%
  */
 
-public interface QueryPartBuilder {
-	QueryPart build();
+import org.apache.hadoop.hbase.filter.Filter;
+
+
+public interface QueryPart {
+	boolean passes(Object house);
+	Filter toFilter(byte[] family);
 }

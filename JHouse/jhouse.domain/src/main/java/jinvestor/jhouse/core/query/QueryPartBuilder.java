@@ -1,4 +1,4 @@
-package jinvestor.jhouse.download;
+package jinvestor.jhouse.core.query;
 
 /*
  * #%L
@@ -20,18 +20,6 @@ package jinvestor.jhouse.download;
  * #L%
  */
 
-import java.util.List;
-
-import jinvestor.jhouse.House;
-
-public interface HouseDAO {
-	void save(House house);
-	void save(List<House> house);
-	House load(long id);
-	List<House> query(String query);
-	House queryFirst(String query);
-	void delete(long id);
-	void delete(House house);
-	void delete(List<House> house);
-	int count(String query);
+public interface QueryPartBuilder {
+	QueryPart build();
 }

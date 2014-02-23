@@ -1,4 +1,4 @@
-package jinvestor.jhouse.download;
+package jinvestor.jhouse.core;
 
 /*
  * #%L
@@ -22,8 +22,8 @@ package jinvestor.jhouse.download;
 
 import java.text.ParseException;
 
-import jinvestor.jhouse.House;
-import jinvestor.jhouse.download.HouseDAO;
+import jinvestor.jhouse.core.House;
+import jinvestor.jhouse.core.HouseDAO;
 
 import org.apache.commons.lang3.time.DateUtils;
 import org.junit.Assert;

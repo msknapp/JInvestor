@@ -1,4 +1,4 @@
-package jinvestor.jhouse.util;
+package jinvestor.jhouse.core.util;
 
 /*
  * #%L
@@ -20,8 +20,8 @@ package jinvestor.jhouse.util;
  * #L%
  */
 
-import jinvestor.jhouse.House;
-import jinvestor.jhouse.util.HouseQueryUtil;
+import jinvestor.jhouse.core.util.HouseQueryUtil;
+import jinvestor.jhouse.core.House;
 
 import org.junit.Assert;
 import org.junit.Test;

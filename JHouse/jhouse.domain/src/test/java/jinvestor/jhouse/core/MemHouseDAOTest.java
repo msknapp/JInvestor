@@ -1,4 +1,7 @@
-package jinvestor.jhouse;
+package jinvestor.jhouse.core;
+
+import jinvestor.jhouse.core.HouseDAO;
+import jinvestor.jhouse.core.MemHouseDAO;
 
 /*
  * #%L
@@ -20,18 +23,11 @@ package jinvestor.jhouse;
  * #L%
  */
 
-public class HouseSummary {
+public class MemHouseDAOTest extends HouseDAOTest {
 
-	
-	private HouseSummary(HouseSummaryBuilder builder) {
-		
+	@Override
+	public HouseDAO getDao() {
+		return new MemHouseDAO();
 	}
-	
-	public static HouseSummaryBuilder builder() {
-		return new HouseSummaryBuilder();
-	}
-	
-	public static class HouseSummaryBuilder {
-		
-	}
+
 }

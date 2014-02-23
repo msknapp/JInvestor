@@ -1,4 +1,4 @@
-package jinvestor.jhouse;
+package jinvestor.jhouse.core;
 
 /*
  * #%L

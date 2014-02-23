@@ -1,4 +1,4 @@
-package jinvestor.jhouse.download;
+package jinvestor.jhouse.core;
 
 /*
  * #%L
@@ -20,14 +20,17 @@ package jinvestor.jhouse.download;
  * #L%
  */
 
-import jinvestor.jhouse.download.HouseDAO;
-import jinvestor.jhouse.download.MemHouseDAO;
+import java.util.List;
 
-public class MemHouseDAOTest extends HouseDAOTest {
 
-	@Override
-	public HouseDAO getDao() {
-		return new MemHouseDAO();
-	}
-
+public interface HouseDAO {
+	void save(House house);
+	void save(List<House> house);
+	House load(long id);
+	List<House> query(String query);
+	House queryFirst(String query);
+	void delete(long id);
+	void delete(House house);
+	void delete(List<House> house);
+	int count(String query);
 }

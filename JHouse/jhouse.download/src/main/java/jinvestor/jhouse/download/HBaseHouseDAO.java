@@ -27,8 +27,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import jinvestor.jhouse.House;
-import jinvestor.jhouse.query.QueryNode;
+import jinvestor.jhouse.core.House;
+import jinvestor.jhouse.core.HouseDAO;
+import jinvestor.jhouse.core.query.QueryNode;
 
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
