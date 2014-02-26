@@ -23,21 +23,32 @@ package jinvestor.jhouse.download;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RecentlySoldZillowLinkSource implements ZillowLinkSource {
+import jinvestor.jhouse.core.ZillowSearchUrl;
 
-	private final String urlTemplate;
+public class SimpleZillowLinkSource implements ZillowLinkSource {
+
+	private final ZillowSearchUrl zillowSearchUrl;
 	
-	public RecentlySoldZillowLinkSource(final String urlTemplate) {
-		this.urlTemplate = urlTemplate;
+	public SimpleZillowLinkSource(final String urlTemplate) {
+		this.zillowSearchUrl = new ZillowSearchUrl(urlTemplate);
+	}
+	
+	public SimpleZillowLinkSource(final ZillowSearchUrl zillowSearchUrl) {
+		this.zillowSearchUrl = zillowSearchUrl;
+	}
+	
+	public SimpleZillowLinkSource() {
+		this.zillowSearchUrl = new ZillowSearchUrl();
 	}
 	
 	@Override
 	public Iterable<String> getLinks() {
 		List<String> links = new ArrayList<String>();
 		for (int i =1;i<=20;i++) {
-			links.add(urlTemplate.replace("PAGE", String.valueOf(i)));
+			zillowSearchUrl.p=String.valueOf(i);
+			String url = zillowSearchUrl.toString();
+			links.add(url);
 		}
 		return links;
 	}
-
 }

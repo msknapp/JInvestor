@@ -5,7 +5,7 @@
 	<packaging>pom</packaging>
 
 	<modules>
-		<module>jhouse.domain</module>
+		<module>jhouse.core</module>
 		<module>jhouse.download</module>
 	</modules>
 

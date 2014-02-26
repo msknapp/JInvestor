@@ -3,50 +3,23 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns:context="http://www.springframework.org/schema/context"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
-           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+           http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
            http://www.springframework.org/schema/context
-           http://www.springframework.org/schema/context/spring-context-3.0.xsd">
-
-	<bean id="dao" class="jinvestor.jhouse.download.HBaseHouseDAO">
-		<constructor-arg name="homesTable" ref="homesTable" />
-		<constructor-arg name="addressIndexTable" ref="addressIndexTable" />
-		<!-- collaborators and configuration for this bean go here -->
-	</bean>
-
+           http://www.springframework.org/schema/context/spring-context-3.2.xsd">
+           
 	<bean id="homesTable" class="org.apache.hadoop.hbase.client.HTable">
 		<constructor-arg name="conf" ref="hadoopConfig"/>
 		<constructor-arg name="tableName" value="homes"/>
-<!-- 		<constructor-arg name="tableName"> -->
-<!-- 			<bean class="org.apache.hadoop.hbase.TableName" factory-method="valueOf"> -->
-<!-- 				<constructor-arg name="name" value="homes"/> -->
-<!-- 			</bean> -->
-<!-- 		</constructor-arg> -->
-<!-- 		<constructor-arg name="connection" ref="hConnection" /> -->
 	</bean>
 	
 	<bean id="addressIndexTable" class="org.apache.hadoop.hbase.client.HTable">
 		<constructor-arg name="conf" ref="hadoopConfig"/>
 		<constructor-arg name="tableName" value="homes_index_address"/>
-<!-- 		<constructor-arg name="tableName"> -->
-<!-- 			<bean class="org.apache.hadoop.hbase.TableName" factory-method="valueOf"> -->
-<!-- 				<constructor-arg name="name" value="homes_index_address"/> -->
-<!-- 			</bean> -->
-<!-- 		</constructor-arg> -->
-<!-- 		<constructor-arg name="connection" ref="hConnection" /> -->
 	</bean>
-
-<!-- 	<bean id="addressIndexTable" factory-bean="hConnection" factory-method="getTable"> -->
-<!-- 		<constructor-arg name="tableName" value="homes_index_address" /> -->
-<!-- 	</bean> -->
-
-<!-- 	<bean id="hConnection" class="org.apache.hadoop.hbase.client.HConnectionManager" -->
-<!-- 		factory-method="createConnection"> -->
-<!-- 		<constructor-arg name="conf" ref="hadoopConfig" /> -->
-<!-- 	</bean> -->
 
 	<bean id="hadoopConfig" class="org.apache.hadoop.conf.Configuration" />
 	
-	<bean id="linkSource" class="jinvestor.jhouse.download.RecentlySoldZillowLinkSource">
+	<bean id="linkSource" class="jinvestor.jhouse.download.SimpleZillowLinkSource">
 		<constructor-arg name="urlTemplate" value="${jinvestor.jhouse.zillow.recentlysold.url}"/>
 	</bean>
 	
@@ -60,4 +33,25 @@
 	</bean>
 	
 	<context:property-placeholder location="classpath:zillow.properties"/>
+	
+    <beans profile="localHBase">
+	
+	
+		<bean id="dao" class="jinvestor.jhouse.download.HBaseHouseDAO">
+			<constructor-arg name="homesTable" ref="homesTable" />
+			<constructor-arg name="addressIndexTable" ref="addressIndexTable" />
+			<!-- collaborators and configuration for this bean go here -->
+		</bean>
+    
+    
+    </beans>
+    
+	<beans profile="aws">
+	
+		<bean id="dao" class="jinvestor.jhouse.download.HBaseHouseDAO">
+			<constructor-arg name="homesTable" ref="homesTable" />
+			<constructor-arg name="addressIndexTable" ref="addressIndexTable" />
+			<!-- collaborators and configuration for this bean go here -->
+		</bean>
+	</beans>
 </beans>

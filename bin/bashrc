@@ -1,0 +1,35 @@
+# .bashrc
+
+# User specific aliases and functions
+
+export JAVA_HOME=/usr/java/latest
+#export PYTHONPATH=/home/cloudera/workspace/numpy
+export PATH="$JAVA_HOME/bin:/opt/eclipse/eclipse:$PATH"
+export CLASSPATH=".:/usr/local/lib/antlr-4.2-complete.jar:$CLASSPATH"
+export WORKSPACE="$HOME/workspace"
+export JINVESTOR_HOME="$HOME/JInvestor"
+export JINVESTOR_WS="$WORKSPACE/JInvestor"
+
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+alias sbrc='source ~/.bashrc'
+alias ebrc='vi ~/.bashrc'
+alias antlr4='java -jar /usr/local/lib/antlr-4.2-complete.jar'
+alias grun='java org.antlr.v4.runtime.misc.TestRig'
+alias cdji='cd $WORKSPACE/JInvestor'
+alias cpbrc='cp $JINVESTOR_WS/bin/bashrc ~/.bashrc'
+alias mci='mvn clean install'
+alias mcist='mvn clean install -DskipTests'
+alias cdjh='cd $JINVESTOR_WS/JHouse'
+alias cdjs='cd $JINVESTOR_WS/JStock'
+alias cdjhc='cd $JINVESTOR_WS/JHouse/jhouse.core'
+alias cdjhd='cd $JINVESTOR_WS/JHouse/jhouse.download'
+alias cdbin='cd $JINVESTOR_WS/bin'
+alias lsf='ll $1 | egrep -v "^d" | gawk '"'"'{print($NF)}'"'"
+alias lsd='ll $1 | egrep "^d" | gawk '"'"'{print($NF)}'"'"
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+	. /etc/bashrc
+fi
