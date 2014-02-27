@@ -115,6 +115,7 @@
 		</dependency>
 	</dependencies>
 	<build>
+		<finalName>${project.artifactId}</finalName>
 		<plugins>
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
@@ -122,7 +123,6 @@
 				<configuration>
 					<descriptors>
 						<descriptor>src/main/assembly/distributable_assembly.xml</descriptor>
-						<!-- <descriptorRef>bin</descriptorRef> -->
 					</descriptors>
 				</configuration>
 				<executions>
