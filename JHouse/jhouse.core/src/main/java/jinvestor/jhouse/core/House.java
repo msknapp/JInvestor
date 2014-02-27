@@ -224,8 +224,8 @@ public class House {
 			this.acres = acres;
 			return this;
 		}
-		public HouseBuilder beds(byte beds) {
-			this.beds = beds;
+		public HouseBuilder beds(int beds) {
+			this.beds = (byte)beds;
 			return this;
 		}
 		public HouseBuilder baths(float baths) {

@@ -108,7 +108,7 @@ public class ZillowSearchUrl {
 				String[] kv = p.split("=");
 				try {
 					set(URLDecoder.decode(kv[0], ENC),
-							URLDecoder.decode(kv[0], ENC));
+							URLDecoder.decode(kv[1], ENC));
 				} catch (UnsupportedEncodingException e) {
 					logger.error(e);
 				}
@@ -142,6 +142,9 @@ public class ZillowSearchUrl {
 		Field[] fs = this.getClass().getDeclaredFields();
 		List<String> sss = new ArrayList<>();
 		for (Field f : fs) {
+			if ("base".equals(f.getName()) || Modifier.isStatic(f.getModifiers())) {
+				continue;
+			}
 			try {
 				sss.add(String.format("%s=%s",
 						URLEncoder.encode(f.getName(), ENC),

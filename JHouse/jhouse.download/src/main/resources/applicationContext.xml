@@ -7,21 +7,13 @@
            http://www.springframework.org/schema/context
            http://www.springframework.org/schema/context/spring-context-3.2.xsd">
            
-	<bean id="homesTable" class="org.apache.hadoop.hbase.client.HTable">
-		<constructor-arg name="conf" ref="hadoopConfig"/>
-		<constructor-arg name="tableName" value="homes"/>
-	</bean>
-	
-	<bean id="addressIndexTable" class="org.apache.hadoop.hbase.client.HTable">
-		<constructor-arg name="conf" ref="hadoopConfig"/>
-		<constructor-arg name="tableName" value="homes_index_address"/>
-	</bean>
-
 	<bean id="hadoopConfig" class="org.apache.hadoop.conf.Configuration" />
 	
 	<bean id="linkSource" class="jinvestor.jhouse.download.SimpleZillowLinkSource">
-		<constructor-arg name="urlTemplate" value="${jinvestor.jhouse.zillow.recentlysold.url}"/>
+		<constructor-arg name="zillowSearchUrl" ref="zillowSearchUrl"/>
 	</bean>
+	
+	<bean id="zillowSearchUrl" class="jinvestor.jhouse.core.ZillowSearchUrl" factory-method="forSaleOnly"/>
 	
 	<bean id="searchProcessor" class="jinvestor.jhouse.download.SearchProcessor">
 		<constructor-arg name="dao" ref="dao"/>
@@ -35,23 +27,15 @@
 	<context:property-placeholder location="classpath:zillow.properties"/>
 	
     <beans profile="localHBase">
-	
-	
 		<bean id="dao" class="jinvestor.jhouse.download.HBaseHouseDAO">
-			<constructor-arg name="homesTable" ref="homesTable" />
-			<constructor-arg name="addressIndexTable" ref="addressIndexTable" />
-			<!-- collaborators and configuration for this bean go here -->
+			<constructor-arg name="configuration" ref="hadoopConfig" />
 		</bean>
-    
-    
     </beans>
     
 	<beans profile="aws">
-	
 		<bean id="dao" class="jinvestor.jhouse.download.HBaseHouseDAO">
-			<constructor-arg name="homesTable" ref="homesTable" />
-			<constructor-arg name="addressIndexTable" ref="addressIndexTable" />
-			<!-- collaborators and configuration for this bean go here -->
+			<constructor-arg name="configuration" ref="hadoopConfig" />
 		</bean>
+		<!-- TODO: define another configuration that points to zookeeper on AWS. -->
 	</beans>
 </beans>

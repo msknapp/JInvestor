@@ -25,13 +25,18 @@ import java.util.List;
 import java.util.Stack;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
+
 public class QueryNode {
 	public QueryNode parent=null;
 	public List<Object> subs = new ArrayList<Object>();
 
 	public static QueryNode parseNode(String query) {
-		Stack<StringBuilder> stack = new Stack<StringBuilder>();
 		QueryNode rootNode = new QueryNode();
+		if (StringUtils.isEmpty(query)) {
+			return rootNode;
+		}
+		Stack<StringBuilder> stack = new Stack<StringBuilder>();
 		QueryNode currentNode = rootNode;
 		boolean inQuote=false;
 		char quoteType='x';
