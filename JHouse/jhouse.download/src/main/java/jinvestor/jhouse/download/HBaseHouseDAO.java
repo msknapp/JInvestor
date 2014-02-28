@@ -107,6 +107,7 @@ public class HBaseHouseDAO implements HouseDAO {
 				homesTable.put(put);
 				Put adrPut = buildAddressPut(house);
 				addressIndexTable.put(adrPut);
+				logger.info("Successfully saved a house with zpid: "+house.getZpid());
 			}
 		});
 	}
@@ -128,9 +129,11 @@ public class HBaseHouseDAO implements HouseDAO {
 		put.add(DATA, SQUARE_FEET, Bytes.toBytes(house.getSquareFeet()));
 		put.add(DATA, YEAR_BUILT, Bytes.toBytes(house.getYearBuilt()));
 		put.add(DATA, ADDRESS, Bytes.toBytes(house.getAddress()));
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-		String lsd = sdf.format(house.getLastSoldDate());
-		put.add(DATA, LAST_SOLD_DATE, Bytes.toBytes(lsd));
+		if (house.getLastSoldDate()!= null) {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			String lsd = sdf.format(house.getLastSoldDate());
+			put.add(DATA, LAST_SOLD_DATE, Bytes.toBytes(lsd));
+		}
 		return put;
 	}
 

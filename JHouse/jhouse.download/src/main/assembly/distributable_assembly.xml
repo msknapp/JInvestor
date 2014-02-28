@@ -16,14 +16,20 @@
 			<includes>
 				<include>LICENSE*</include>
 			</includes>
+			<fileMode>0644</fileMode>
+			<directoryMode>0755</directoryMode>
 		</fileSet>
 		<fileSet>
-			<directory>conf</directory>
+			<directory>etc</directory>
 			<outputDirectory>etc</outputDirectory>
+			<fileMode>0644</fileMode>
+			<directoryMode>0755</directoryMode>
 		</fileSet>
 		<fileSet>
 			<directory>bin</directory>
-			<outputDirectory>bin</outputDirectory>
+			<outputDirectory>/</outputDirectory>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
 		</fileSet>
 	</fileSets>
 	<dependencySets>

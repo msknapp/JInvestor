@@ -44,8 +44,10 @@ public class ZillowDownloader {
 
 	public void download() {
 		HttpClient client = HttpClientBuilder.create().build();
+		logger.debug("Starting to download home data from zillow.");
 		for (String url : source.getLinks()) {
 			try {
+				logger.info(String.format("Downloading from %s",url));
 				HttpGet get = new HttpGet(url);
 				HttpResponse response = client.execute(get);
 				searchProcessor.process(response.getEntity().getContent());
@@ -55,5 +57,6 @@ public class ZillowDownloader {
 				logger.error("Failed to get from url: " + url, e);
 			}
 		}
+		logger.debug("Done downloading home data from zillow.");
 	}
 }

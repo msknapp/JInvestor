@@ -1,4 +1,4 @@
-package jinvestor.jhouse;
+package jinvestor.jhouse.download;
 
 /*
  * #%L
@@ -20,27 +20,35 @@ package jinvestor.jhouse;
  * #L%
  */
 
-import jinvestor.jhouse.download.ZillowDownloader;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class HouseXYCL {
-
+	private static final Logger logger = Logger.getLogger(HouseXYCL.class);
+	
+	
 	public static void main(String[] arguments) {
 		Options options = new Options();
 		options.addOption("d",false,"download data");
-		ApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+		logger.debug("Started HouseXYCL application.");
+		ApplicationContext context = new ClassPathXmlApplicationContext("classpath:applicationContext.xml");
+		logger.debug("The app context is "+(context == null ? "" : "not ")+"null");
 		try {
 			PosixParser parser = new PosixParser();
 			CommandLine commandLine = parser.parse(options, arguments);
 			if (commandLine.hasOption('d')) {
+				logger.debug("The user specified argument -d, download data.");
 				ZillowDownloader dl = context.getBean(ZillowDownloader.class);
-				dl.download();
+				if (dl!=null) {
+					dl.download();
+				} else {
+					logger.error("The ZillowDownloader was null.");
+				}
 			}
 		} catch (Exception e) {
 			HelpFormatter hf = new HelpFormatter();

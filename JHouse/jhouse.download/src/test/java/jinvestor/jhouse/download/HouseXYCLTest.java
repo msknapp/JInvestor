@@ -1,4 +1,4 @@
-package jinvestor.jhouse;
+package jinvestor.jhouse.download;
 
 /*
  * #%L
@@ -20,7 +20,7 @@ package jinvestor.jhouse;
  * #L%
  */
 
-import jinvestor.jhouse.HouseXYCL;
+import jinvestor.jhouse.download.HouseXYCL;
 
 import org.junit.Ignore;
 import org.junit.Test;

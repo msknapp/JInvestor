@@ -31,6 +31,7 @@ import jinvestor.jhouse.core.House.HouseBuilder;
 import jinvestor.jhouse.core.HouseDAO;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -58,9 +59,10 @@ public class SearchProcessor {
 			JsonNode n2 = rootNode.path("list").path("listHTML");
 			String xml = n2.getTextValue();
 			xml = StringEscapeUtils.unescapeXml(xml);
-			String html = new StringBuilder().append("<html><head></head><body>")
-					.append(xml).append("</body>").toString();
-			
+			String html = new StringBuilder()
+					.append("<html><head></head><body>").append(xml)
+					.append("</body>").toString();
+
 			// then parse the xml.
 			Document doc2 = Jsoup.parse(html);
 			Elements elements = doc2.getElementsByClass("property-listing");
@@ -119,13 +121,26 @@ public class SearchProcessor {
 	}
 
 	private Date getLastSoldDate(Element element) {
-		String s = element.select(".sold-date").first().text();
-		String[] p = s.split("\\s+");
-		String lst = p[p.length - 1];
-		SimpleDateFormat sdf = new SimpleDateFormat("mm/dd/yy");
 		Date d = null;
+		String lst = null;
 		try {
-			d = sdf.parse(lst);
+			Elements elms = element.select(".sold-date");
+			if (elms !=null && !elms.isEmpty()) {
+				String s = elms.first().text();
+				if (!StringUtils.isEmpty(s)) {
+					String[] p = s.split("\\s+");
+					lst = p[p.length - 1];
+					SimpleDateFormat sdf = new SimpleDateFormat("mm/dd/yy");
+					d = sdf.parse(lst);
+				} else {
+					logger.debug("Hmm, this is quite odd, there was an element for the last sold date but its text value was null/empty.");
+				}
+			} else {
+				// only debug because maybe the record doesn't contain that information,
+				// maybe it is the original owner and for some reason zillow doesn't have
+				// this information.
+				logger.debug("Unable to select the sold date from an element.");
+			}
 		} catch (ParseException e) {
 			logger.error("Failed to parse the date " + lst);
 		}
