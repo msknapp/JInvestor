@@ -12,10 +12,15 @@
 	</modules>
 
 	<properties>
-		<spring.version>3.2.5.RELEASE</spring.version>
+		<spring.version>4.0.2.RELEASE</spring.version>
+<!-- 		<spring.version>3.2.5.RELEASE</spring.version> -->
+<!-- 		<hibernate.version>4.2.8.Final</hibernate.version> -->
+<!-- 		<hibernate.version>4.3.3.Final</hibernate.version> -->
+		<hibernate.version>4.2.0.Final</hibernate.version>
+<!-- 		<hibernate.version>4.1.7.Final</hibernate.version> -->
 		<hadoop.version>2.1.1.RELEASE</hadoop.version>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jackson.version>1.8.8</jackson.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
 	<url>https://github.com/msknapp/JInvestor</url>
@@ -172,7 +177,7 @@
 			<dependency>
 				<groupId>org.hibernate</groupId>
 				<artifactId>hibernate-core</artifactId>
-				<version>4.3.3.Final</version>
+				<version>${hibernate.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>javax.transaction</groupId>

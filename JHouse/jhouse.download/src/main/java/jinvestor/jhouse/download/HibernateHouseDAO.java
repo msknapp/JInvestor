@@ -8,7 +8,6 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
-import org.springframework.orm.hibernate3.SessionFactoryUtils;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,34 +29,34 @@ public class HibernateHouseDAO implements HouseDAO {
 
 	@Override
 	public House load(long id) {
-		
-		// this throws a nosuch method error for openSession.
-//		Session session = SessionFactoryUtils.getSession(sessionFactory, false);
-		
-		// this throws an error on the lack of a transaction.
 		Session session = sessionFactory.getCurrentSession();
 		HouseEntity entity = (HouseEntity) session.get(HouseEntity.class, id);
-		return House.fromEntity(entity);
+		return entity==null?null:House.fromEntity(entity);
 	}
 
 	@Override
 	public void save(House house) {
-		sessionFactory.getCurrentSession().save(new HouseEntity(house));
+		sessionFactory.getCurrentSession().saveOrUpdate(new HouseEntity(house));
 	}
 
 	@Override
 	public void save(List<House> houses) {
-		for (House house : houses) {
-			save(house);
+		if (houses!=null) {
+			for (House house : houses) {
+				save(house);
+			}
 		}
 	}
 
 	@Override
 	public List<House> query(String query) {
+		List<House> houses = new ArrayList<House>();
+		if (query==null) {
+			query="from house";
+		}
 		Session session = sessionFactory.getCurrentSession();
 		Query q = session.createQuery(query);
 		List<HouseEntity> entities = q.list();
-		List<House> houses = new ArrayList<House>();
 		for (HouseEntity he : entities) {
 			houses.add(House.fromEntity(he));
 		}
@@ -74,12 +73,18 @@ public class HibernateHouseDAO implements HouseDAO {
 
 	@Override
 	public void delete(long id) {
-		sessionFactory.getCurrentSession().delete(id);
+		Session session = sessionFactory.getCurrentSession();
+		HouseEntity h = (HouseEntity) session.get(HouseEntity.class, id);
+		if (h!=null) {
+			session.delete(h);
+		}
 	}
 
 	@Override
 	public void delete(House house) {
-		delete(house.getZpid());
+		if (house!=null) {
+			sessionFactory.getCurrentSession().delete(new HouseEntity(house));
+		}
 	}
 
 	@Override
@@ -91,6 +96,12 @@ public class HibernateHouseDAO implements HouseDAO {
 
 	@Override
 	public int count(String query) {
+		if (query == null) {
+			Session session = sessionFactory.getCurrentSession();
+			Query q = session.createQuery("select count(h) FROM house as h");
+			Long n = (Long) q.uniqueResult();
+			return n.intValue();
+		}
 		return query(query).size();
 	}
 }
