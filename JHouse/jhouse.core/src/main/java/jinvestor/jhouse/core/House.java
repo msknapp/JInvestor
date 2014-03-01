@@ -107,6 +107,10 @@ public class House {
 		return new HouseBuilder(house);
 	}
 	
+	public static House fromEntity(final HouseEntity entity) {
+		return new HouseBuilder(entity).build();
+	}
+	
 	public HouseBuilder cloneToBuilder() {
 		return new HouseBuilder(this);
 	}
@@ -210,6 +214,20 @@ public class House {
 			this.longitude = h.longitude;
 			this.soldPrice = h.soldPrice;
 			this.squareFeet = h.squareFeet;
+		}
+		
+		public HouseBuilder(HouseEntity house) {
+			this.zpid = house.getZpid();
+			this.latitude=house.getLatitude();
+			this.longitude = house.getLongitude();
+			this.soldPrice = house.getSoldPrice();
+			this.lastSoldDate = house.getLastSoldDate();
+			this.yearBuilt = house.getYearBuilt();
+			this.acres = house.getAcres();
+			this.baths = house.getBaths();
+			this.beds = house.getBeds();
+			this.squareFeet = house.getSquareFeet();
+			this.address = house.getAddress();
 		}
 		
 		public HouseBuilder zpid(long zpid) {

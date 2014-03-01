@@ -1,38 +1,93 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
            http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
            http://www.springframework.org/schema/context
-           http://www.springframework.org/schema/context/spring-context-3.2.xsd">
-           
-	<bean id="hadoopConfig" class="org.apache.hadoop.conf.Configuration" />
-	
+           http://www.springframework.org/schema/context/spring-context-3.2.xsd
+           http://www.springframework.org/schema/tx
+           http://www.springframework.org/schema/tx/spring-tx-3.2.xsd">
+
+
 	<bean id="linkSource" class="jinvestor.jhouse.download.SimpleZillowLinkSource">
-		<constructor-arg name="zillowSearchUrl" ref="zillowSearchUrl"/>
+		<constructor-arg name="zillowSearchUrl" ref="zillowSearchUrl" />
 	</bean>
-	
-	<bean id="zillowSearchUrl" class="jinvestor.jhouse.core.ZillowSearchUrl" factory-method="forSaleOnly"/>
-	
+
+	<bean id="zillowSearchUrl" class="jinvestor.jhouse.core.ZillowSearchUrl"
+		factory-method="forSaleOnly" />
+
 	<bean id="searchProcessor" class="jinvestor.jhouse.download.SearchProcessor">
-		<constructor-arg name="dao" ref="dao"/>
+		<constructor-arg name="dao" ref="dao" />
 	</bean>
-	
+
 	<bean id="downloader" class="jinvestor.jhouse.download.ZillowDownloader">
-		<constructor-arg name="source" ref="linkSource"/>
-		<constructor-arg name="searchProcessor" ref="searchProcessor"/>
+		<constructor-arg name="source" ref="linkSource" />
+		<constructor-arg name="searchProcessor" ref="searchProcessor" />
 	</bean>
-	
-	<context:property-placeholder location="classpath:zillow.properties"/>
-	
-    <beans profile="localHBase">
+
+	<beans profile="runtime">
+		<context:property-placeholder
+			location="file:${JINVESTOR_HOME}/etc/jinvestor.properties" />
+		<context:property-placeholder
+			location="file:${JINVESTOR_HOME}/etc/aws.properties" />
+	</beans>
+
+	<beans profile="test">
+		<context:property-placeholder location="classpath:jinvestor-test.properties" />
+	</beans>
+
+	<beans profile="localHBase">
+		<bean id="hadoopConfig" class="org.apache.hadoop.conf.Configuration" />
 		<bean id="dao" class="jinvestor.jhouse.download.HBaseHouseDAO">
 			<constructor-arg name="configuration" ref="hadoopConfig" />
 		</bean>
-    </beans>
-    
+	</beans>
+
+	<beans profile="mysql">
+		<tx:annotation-driven />
+
+		<!-- Pick up the HibernateHouseDAO spring bean -->
+		<context:component-scan base-package="jinvestor.jhouse.download" />
+
+		<bean id="sessionFactory"
+			class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+			<property name="dataSource" ref="dataSource" />
+			<property name="annotatedClasses">
+				<list>
+					<value>jinvestor.jhouse.core.HouseEntity</value>
+				</list>
+			</property>
+			<property name="hibernateProperties">
+				<props>
+					<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+					<prop key="hibernate.current_session_context_class">thread</prop>
+					<prop key="hibernate.transaction.factory_class">org.hibernate.transaction.JDBCTransactionFactory</prop>
+				</props>
+			</property>
+		</bean>
+
+		<bean id="dataSource"
+			class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+			<property name="driverClassName" value="${dataSource.driver}" />
+			<property name="url" value="${dataSource.url}" />
+			<property name="username" value="${dataSource.username}" />
+			<property name="password" value="${dataSource.password}" />
+		</bean>
+
+		<bean id="transactionManager"
+			class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+			<property name="dataSource" ref="dataSource" />
+		</bean>
+
+<!-- 		<bean id="transactionManager" -->
+<!-- 			class="org.springframework.orm.hibernate4.HibernateTransactionManager"> -->
+<!-- 			<property name="sessionFactory" ref="sessionFactory" /> -->
+<!-- 		</bean> -->
+	</beans>
+
 	<beans profile="aws">
+		<bean id="hadoopConfig" class="org.apache.hadoop.conf.Configuration" />
 		<bean id="dao" class="jinvestor.jhouse.download.HBaseHouseDAO">
 			<constructor-arg name="configuration" ref="hadoopConfig" />
 		</bean>

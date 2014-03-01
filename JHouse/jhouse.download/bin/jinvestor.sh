@@ -10,7 +10,7 @@ if [ ! -d "logs" ]; then
 	mkdir logs
 fi
 
-JAVA_OPTS="-Xmx1024m -Xms256m -Dspring.profiles.active=localHBase -Dlog4j.configuration=file:etc/log4j.xml"
+JAVA_OPTS="-Xmx1024m -Xms256m -Dspring.profiles.active=localHBase,runtime -Dlog4j.configuration=file:etc/log4j.xml"
 
 # discover the jar
 JAR=$(ls lib | grep "jinvestor.jhouse.download")

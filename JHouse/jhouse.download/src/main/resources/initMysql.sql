@@ -1,0 +1,1 @@
+create table homes (zpid BIGINT PRIMARY KEY NOT NULL, address VARCHAR(200) NOT NULL,squareFeet INT UNSIGNED,soldPrice INT UNSIGNED, latitude INT,longitude INT,lastSoldDate DATE, yearBuilt YEAR,acres FLOAT UNSIGNED,beds TINYINT UNSIGNED,baths TINYINT UNSIGNED, INDEX (address)) ENGINE = 'INNODB';
