@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
@@ -79,7 +80,7 @@ public class HouseVectorizer {
 				maximumHouse));
 		jobConf.set("minmax", minmax);
 		jobConf.setCompressMapOutput(true);
-		jobConf.setMapOutputCompressorClass(SnappyCodec.class);
+//		jobConf.setMapOutputCompressorClass(SnappyCodec.class);
 
 		Job job = Job.getInstance(jobConf);
 		Scan scan = new Scan();
@@ -95,12 +96,17 @@ public class HouseVectorizer {
 		
 		SequenceFileOutputFormat.setOutputPath(job, outputDir);
 		
-		// this does not seem to work for some reason:
-//		SequenceFileOutputFormat.setOutputCompressionType(job, SequenceFile.CompressionType.BLOCK);
-//		SequenceFileOutputFormat.setOutputCompressorClass(job, SnappyCodec.class);
-//		job.getConfiguration().setClass("mapreduce.map.output.compress.codec", 
-//				SnappyCodec.class, 
-//                CompressionCodec.class);
+		SequenceFileOutputFormat.setOutputCompressionType(job, SequenceFile.CompressionType.BLOCK);
+		
+		// if you get an UnsatisfiedLinkError due to this using Snappy, then try the following in a terminal:
+//		$ cd /usr/lib/hadoop/lib/native
+//		$ sudo cp *.so /usr/java/latest/jre/lib/amd64/
+		// if that does not resolve it, then try modifying your mapreduce-site.xml 
+		// so the SnappyCodec is used everywhere.
+		// if that does not resolve it, then switch to the DefaultCodec, but please
+		// don't commit that change.
+		
+		SequenceFileOutputFormat.setOutputCompressorClass(job, SnappyCodec.class);
 		
 		job.waitForCompletion(true);
 	}
