@@ -5,8 +5,9 @@
 	<packaging>pom</packaging>
 
 	<modules>
-		<module>jhouse.core</module>
-		<module>jhouse.download</module>
+		<module>jinvestor.jhouse.core</module>
+		<module>jinvestor.jhouse.download</module>
+		<module>jinvestor.jhouse.mr</module>
 	</modules>
 
 	<parent>
@@ -31,4 +32,16 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.mahout</groupId>
+			<artifactId>mahout-core</artifactId>
+			<exclusions>
+				<exclusion>
+					<artifactId>jfreechart</artifactId>
+					<groupId>jfree</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+	</dependencies>
 </project>

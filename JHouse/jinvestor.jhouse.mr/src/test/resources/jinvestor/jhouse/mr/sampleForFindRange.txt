@@ -1,0 +1,8 @@
+beds-min	1
+beds-max	8
+baths-min	1
+baths-max	5
+longitude-min	18723
+longitude-max	20958
+yearbuilt-min	1910
+yearbuilt-max	2013

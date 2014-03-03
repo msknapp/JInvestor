@@ -1,0 +1,18 @@
+{
+	"namespace": "jinvestor.jhouse.core",
+ "type": "record",
+ "name": "House",
+ "fields": [
+     {"name": "zpid", "type": "long"},
+     {"name": "acres", "type": ["float","null"]},
+     {"name": "address", "type": ["string", "null"]},
+     {"name": "baths",  "type": ["float", "null"]},
+     {"name": "beds",  "type": ["int", "null"]},
+     {"name": "latitude", "type": ["int", "null"]},
+     {"name": "longitude", "type": ["int", "null"]},
+     {"name": "soldprice", "type": ["int", "null"]},
+     {"name": "lastsolddate", "type": ["long", "null"]},
+     {"name": "squarefeet", "type": ["int", "null"]},
+     {"name": "yearbuilt", "type": ["int", "null"]}
+ ]
+}
