@@ -87,6 +87,20 @@ public class HouseRangeFinderTest {
 		Assert.assertEquals("20", results.get("beds-max"));
 	}
 
+	@Test
+	public void reduceBeds3() throws IOException {
+		Assert.assertEquals(3,(int)Math.round(new Double(2.99)));
+		HouseRangeFindingReducer reducer = new HouseRangeFindingReducer();
+		Text key = new Text("beds");
+		List<Text> values = Arrays.asList(new Text("0.0"), new Text("20"));
+		MyCollector output = new MyCollector();
+		reducer.reduce(key, values.iterator(), output, null);
+		Map<String, String> results = output.getResults();
+		Assert.assertEquals(2, results.size());
+		Assert.assertEquals("0", results.get("beds-min"));
+		Assert.assertEquals("20", results.get("beds-max"));
+	}
+
 	private static final class MyCollector implements
 			OutputCollector<Text, Text> {
 		private Map<String, String> output = new HashMap<String, String>();

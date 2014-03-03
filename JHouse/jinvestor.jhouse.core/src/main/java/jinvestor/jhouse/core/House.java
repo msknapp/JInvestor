@@ -71,7 +71,8 @@ public class House {
 	public Date getLastSoldDate() {
 		// we want to remain immutable.
 		// return a copy.
-		return new Date(lastSoldDate.getTime());
+		return this.lastSoldDate == null ? null : new Date(
+				lastSoldDate.getTime());
 	}
 
 	public int getYearBuilt() {
@@ -178,11 +179,11 @@ public class House {
 			return false;
 		return true;
 	}
-	
-	public static boolean isEquals(double d1,double d2) {
+
+	public static boolean isEquals(double d1, double d2) {
 		// when talking about beds, baths, acres,
 		// precision is not high.
-		return Math.abs(d1-d2)<0.005;
+		return Math.abs(d1 - d2) < 0.005;
 	}
 
 	public static class HouseBuilder {
@@ -246,8 +247,8 @@ public class House {
 			}
 		}
 
-		public void setField(String fieldName,String value) {
-			if (value == null){
+		public void setField(String fieldName, String value) {
+			if (value == null) {
 				return;
 			}
 			if ("acres".equals(fieldName)) {
@@ -255,24 +256,60 @@ public class House {
 			} else if ("baths".equals(fieldName)) {
 				this.baths(Float.parseFloat(value));
 			} else if ("latitude".equals(fieldName)) {
-				this.latitude(Integer.parseInt(value));
+				this.latitude(getInt(value));
 			} else if ("longitude".equals(fieldName)) {
-				this.longitude(Integer.parseInt(value));
+				this.longitude(getInt(value));
 			} else if ("soldprice".equals(fieldName)) {
-				Long v = Long.parseLong(value);
+				Long v = getLong(value);
 				Date d = new Date(v);
 				this.lastSoldDate(d);
 			} else if ("squarefeet".equals(fieldName)) {
-				this.squareFeet(Integer.parseInt(value));
+				this.squareFeet(getInt(value));
 			} else if ("yearbuilt".equals(fieldName)) {
-				this.yearBuilt(Integer.parseInt(value));
+				this.yearBuilt(getInt(value));
 			} else if ("beds".equals(fieldName)) {
-				this.beds(Integer.parseInt(value));
+				this.beds(getInt(value));
 			} else if ("lastsoldtimestamp".equals(fieldName)) {
-				Long v = Long.parseLong(value);
+				Long v = getLong(value);
 				Date d = new Date(v);
 				this.lastSoldDate(d);
 			}
+		}
+		
+		private long getLong(String value) {
+			if (value==null) {
+				return 0;
+			}
+			if (value.contains(".")) {
+				Double d = Double.parseDouble(value);
+				return Math.round(d);
+			}
+			if ("-Infinity".equals(value)) {
+				return Long.MIN_VALUE;
+			} else if ("Infinity".equals(value)) {
+				return Long.MAX_VALUE;
+			} else if ("NaN".equals(value)) {
+				return 0;
+			}
+			return Long.parseLong(value);
+		}
+		
+		private int getInt(String value) {
+			if (value==null) {
+				return 0;
+			}
+			if (value.contains(".")) {
+				Double d = Double.parseDouble(value);
+				return (int)Math.round(d);
+			}
+			if ("-Infinity".equals(value)) {
+				return Integer.MIN_VALUE;
+			} else if ("Infinity".equals(value)) {
+				return Integer.MAX_VALUE;
+			} else if ("NaN".equals(value)) {
+				return 0;
+			}
+			return Integer.parseInt(value);
 		}
 
 		public HouseBuilder zpid(long zpid) {

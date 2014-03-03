@@ -1,6 +1,8 @@
 package jinvestor.jhouse.mr;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 
@@ -8,9 +10,12 @@ import jinvestor.jhouse.core.House;
 import jinvestor.jhouse.core.util.HouseAvroUtil;
 import jinvestor.jhouse.download.HBaseHouseDAO;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -18,9 +23,10 @@ import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.SequenceFileAsBinaryOutputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.mahout.math.DenseVector;
@@ -46,7 +52,7 @@ public class HouseVectorizer {
 		this.maximumHouse = maximumHouse;
 	}
 
-	public void vectorize() throws IOException {
+	public void vectorize() throws IOException, ClassNotFoundException, InterruptedException {
 		JobConf jobConf = new JobConf();
 		jobConf.setMapOutputKeyClass(LongWritable.class);
 		jobConf.setMapOutputValueClass(VectorWritable.class);
@@ -80,7 +86,76 @@ public class HouseVectorizer {
 				HouseVectorizingMapper.class, LongWritable.class,
 				VectorWritable.class, job);
 		
-		JobClient.runJob(jobConf);
+		job.waitForCompletion(true);
+	}
+	
+	public static interface HouseVectorCallback {
+		void handle(LongWritable key,VectorWritable val);
+	}
+	
+	public static class OutputStreamHouseVectorCallback implements HouseVectorCallback {
+		private final OutputStream out;
+		
+		public OutputStreamHouseVectorCallback(final OutputStream out) {
+			this.out = out;
+		}
+
+		@Override
+		public void handle(LongWritable key, VectorWritable val) {
+			try {
+				out.write(val.get().toString().getBytes());
+				out.write("\n".getBytes());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	public void printResults() {
+		OutputStreamHouseVectorCallback cb = new OutputStreamHouseVectorCallback(System.out);
+		try {
+			readResults(cb);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public String getResults()  {
+		ByteArrayOutputStream out = null;
+		byte[] bs=null;
+		try {
+			out = new ByteArrayOutputStream();
+			OutputStreamHouseVectorCallback cb = new OutputStreamHouseVectorCallback(out);
+			readResults(cb);
+			bs = out.toByteArray();
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			IOUtils.closeQuietly(out);
+		}
+		return new String(bs);
+	}
+	
+	public void readResults(HouseVectorCallback callback) throws IOException {
+		FileSystem fs = FileSystem.get(configuration);
+		Path p = new Path("/home/cloudera/house_vectors");
+		RemoteIterator<LocatedFileStatus> fps = fs.listFiles(p, false);
+		LongWritable key = new LongWritable();
+		VectorWritable val = new VectorWritable();
+		while (fps.hasNext()) {
+			LocatedFileStatus lfs = fps.next();
+			Path lfp = lfs.getPath();
+			if (lfp.getName().startsWith("part")) {
+				SequenceFile.Reader reader = new SequenceFile.Reader(configuration,SequenceFile.Reader.file(lfp));
+				try {
+					while (reader.next(key, val)) {
+						callback.handle(key, val);
+					}
+				} finally {
+					reader.close();
+				}
+			}
+		}
 	}
 
 	public static class HouseVectorizingMapper extends
