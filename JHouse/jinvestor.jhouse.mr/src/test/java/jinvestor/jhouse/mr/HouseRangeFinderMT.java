@@ -22,7 +22,7 @@ public class HouseRangeFinderMT {
 		String s2 = ToStringBuilder.reflectionToString(homes[1]);
 		System.out.println(s);
 		System.out.println(s2);
-		System.out.println(HouseAvroUtil.toString(Arrays.asList(homes[0],homes[1])));
+		System.out.println(HouseAvroUtil.toBase64String(Arrays.asList(homes[0],homes[1])));
 	}
 }
 

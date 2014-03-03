@@ -50,7 +50,7 @@ public final class HouseAvroUtil {
 		return schema;
 	}
 	
-	public static String toString(List<House> homes) {
+	public static String toBase64String(List<House> homes) {
 		byte[] bs = toBytes(homes);
 		// unfortunately these bytes don't transfer nicely into a string.
 		// so I base 64 encode them.
@@ -64,7 +64,7 @@ public final class HouseAvroUtil {
 		return baos.toByteArray();
 	}
 	
-	public static List<House> fromString(String avro) {
+	public static List<House> fromBase64String(String avro) {
 		byte[] decoded = Base64.decodeBase64(avro.getBytes());
 		return fromBytes(decoded);
 	}

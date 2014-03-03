@@ -32,7 +32,7 @@ public class HouseVectorizerTest {
 				.squareFeet(6000).yearBuilt(2013)
 				.soldPrice(500000)
 				.build();
-		String serialized = HouseAvroUtil.toString(Arrays.asList(min,max));
+		String serialized = HouseAvroUtil.toBase64String(Arrays.asList(min,max));
 		
 		HouseVectorizingMapper m = new HouseVectorizingMapper();
 		Context context = Mockito.mock(Context.class);
@@ -74,7 +74,7 @@ public class HouseVectorizerTest {
 				.squareFeet(6000).yearBuilt(2013)
 				.soldPrice(500000)
 				.build();
-		String serialized = HouseAvroUtil.toString(Arrays.asList(min,max));
+		String serialized = HouseAvroUtil.toBase64String(Arrays.asList(min,max));
 		
 		HouseVectorizingMapper m = new HouseVectorizingMapper();
 		Context context = Mockito.mock(Context.class);

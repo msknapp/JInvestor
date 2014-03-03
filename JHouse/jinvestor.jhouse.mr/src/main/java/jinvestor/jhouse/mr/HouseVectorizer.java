@@ -24,11 +24,13 @@ import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.SequenceFileAsBinaryOutputFormat;
-import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.lucene.util.CodecUtil;
 import org.apache.mahout.math.DenseVector;
 import org.apache.mahout.math.NamedVector;
 import org.apache.mahout.math.VectorWritable;
@@ -61,8 +63,6 @@ public class HouseVectorizer {
 		// the order does not matter.
 		jobConf.setNumReduceTasks(0);
 
-		jobConf.setOutputFormat(SequenceFileOutputFormat.class);
-
 		Path outputDir = new Path("/home/cloudera/house_vectors");
 		FileSystem fs = FileSystem.get(configuration);
 		if (fs.exists(outputDir)) {
@@ -75,9 +75,11 @@ public class HouseVectorizer {
 		// so they can normalize the data.
 		// I will add them as properties in the configuration,
 		// by serializing them with avro.
-		String minmax = HouseAvroUtil.toString(Arrays.asList(minimumHouse,
+		String minmax = HouseAvroUtil.toBase64String(Arrays.asList(minimumHouse,
 				maximumHouse));
 		jobConf.set("minmax", minmax);
+		jobConf.setCompressMapOutput(true);
+		jobConf.setMapOutputCompressorClass(SnappyCodec.class);
 
 		Job job = Job.getInstance(jobConf);
 		Scan scan = new Scan();
@@ -85,12 +87,40 @@ public class HouseVectorizer {
 		TableMapReduceUtil.initTableMapperJob("homes", scan,
 				HouseVectorizingMapper.class, LongWritable.class,
 				VectorWritable.class, job);
+		job.setOutputFormatClass(SequenceFileOutputFormat.class);
+		job.setOutputKeyClass(LongWritable.class);
+		job.setOutputValueClass(VectorWritable.class);
+		job.setMapOutputKeyClass(LongWritable.class);
+		job.setMapOutputValueClass(VectorWritable.class);
+		
+		SequenceFileOutputFormat.setOutputPath(job, outputDir);
+		
+		// this does not seem to work for some reason:
+//		SequenceFileOutputFormat.setOutputCompressionType(job, SequenceFile.CompressionType.BLOCK);
+//		SequenceFileOutputFormat.setOutputCompressorClass(job, SnappyCodec.class);
+//		job.getConfiguration().setClass("mapreduce.map.output.compress.codec", 
+//				SnappyCodec.class, 
+//                CompressionCodec.class);
 		
 		job.waitForCompletion(true);
 	}
 	
 	public static interface HouseVectorCallback {
 		void handle(LongWritable key,VectorWritable val);
+	}
+	
+	public static class CountingVectorCallback implements HouseVectorCallback {
+
+		private int count;
+		@Override
+		public void handle(LongWritable key, VectorWritable val) {
+			count++;
+		}
+		
+		public int getCount() {
+			return count;
+		}
+		
 	}
 	
 	public static class OutputStreamHouseVectorCallback implements HouseVectorCallback {
@@ -169,7 +199,7 @@ public class HouseVectorizer {
 			// this class needs to know what the range of values are.
 			// it can get this using the job configuration property.
 			String minmax = context.getConfiguration().get("minmax");
-			List<House> homes = HouseAvroUtil.fromString(minmax);
+			List<House> homes = HouseAvroUtil.fromBase64String(minmax);
 			minimumHouse = homes.get(0);
 			maximumHouse = homes.get(1);
 		}

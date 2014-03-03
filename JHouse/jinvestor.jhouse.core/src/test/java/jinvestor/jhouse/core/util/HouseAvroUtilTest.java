@@ -40,8 +40,8 @@ public class HouseAvroUtilTest {
 //		Assert.assertTrue(new String(s), recs2.contains(h));
 //		Assert.assertTrue(recs2.contains(h2));
 		
-		String s = HouseAvroUtil.toString(Arrays.asList(h, h2));
-		List<House> recs2 = HouseAvroUtil.fromString(s);
+		String s = HouseAvroUtil.toBase64String(Arrays.asList(h, h2));
+		List<House> recs2 = HouseAvroUtil.fromBase64String(s);
 		Assert.assertTrue(new String(s), recs2.contains(h));
 		Assert.assertTrue(recs2.contains(h2));
 	}
@@ -62,8 +62,8 @@ public class HouseAvroUtilTest {
 				.squareFeet(6000).yearBuilt(2013)
 				.soldPrice(500000)
 				.build();
-		String serialized = HouseAvroUtil.toString(Arrays.asList(min,max));
-		List<House> recs2 = HouseAvroUtil.fromString(serialized);
+		String serialized = HouseAvroUtil.toBase64String(Arrays.asList(min,max));
+		List<House> recs2 = HouseAvroUtil.fromBase64String(serialized);
 		Assert.assertTrue(recs2.contains(min));
 		Assert.assertTrue(recs2.contains(max));
 	}
@@ -77,8 +77,8 @@ public class HouseAvroUtilTest {
 				.squareFeet(600).yearBuilt(1910)
 				.soldPrice(50000)
 				.build();
-		String serialized = HouseAvroUtil.toString(Arrays.asList(min));
-		List<House> recs2 = HouseAvroUtil.fromString(serialized);
+		String serialized = HouseAvroUtil.toBase64String(Arrays.asList(min));
+		List<House> recs2 = HouseAvroUtil.fromBase64String(serialized);
 		Assert.assertEquals(min,recs2.iterator().next());
 	}
 }
